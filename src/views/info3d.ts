@@ -1,0 +1,22 @@
+import { analysePlan } from '../core/analyse';
+import { fm } from '../core/format';
+import type { Registry } from '../core/registry';
+import type { RoomGeo } from '../core/room';
+import type { Layout } from '../core/types';
+import type { Frame } from './frame';
+
+export type Info3D = Pick<Frame, 'title' | 'size' | 'area' | 'status'>;
+
+/** Dòng tiêu đề và trạng thái của kiểu xem 3D. failed: không dựng được WebGL. */
+export function describe3D(layout: Layout, R: RoomGeo, reg: Registry, failed: boolean): Info3D {
+  const bad = analysePlan(layout, R, reg).bad.size;
+  let status: Frame['status'];
+  if (failed) {
+    status = { tone: 'good', text: 'Chưa dựng được 3D trên trình duyệt này. Mặt bằng và mặt đứng vẫn dùng bình thường.' };
+  } else if (bad > 0) {
+    status = { tone: 'bad', text: `${bad} món đang chồng lấn, nằm ngoài phòng hoặc chắn vùng mở cửa (khung cam).` };
+  } else {
+    status = { tone: 'good', text: 'Bấm vào món để chọn, kéo món để di chuyển, kéo vào chỗ trống để xoay 360°. Kéo món từ thư viện thả thẳng vào phòng.' };
+  }
+  return { title: `${R.name} · 3D`, size: `${R.W} × ${R.H} × ${R.ceil} cm`, area: `${fm((R.W * R.H) / 10000)} m²`, status };
+}

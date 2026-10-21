@@ -1,4 +1,4 @@
-# Tự Thiết Kế
+# Mix Nhà
 
 Xếp đồ nội thất cho căn hộ trên bản vẽ đúng tỉ lệ. Chạy hoàn toàn trong trình duyệt, không có máy chủ, không cần tài khoản.
 

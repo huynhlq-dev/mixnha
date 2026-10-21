@@ -1,0 +1,256 @@
+/* Khung soạn thảo */
+.editor {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+.bar2 {
+  background: var(--surface2);
+}
+.acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+.bar2 .tab:not([aria-pressed='true']):hover {
+  background: var(--line);
+}
+.wallsrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+#mini {
+  flex: none;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr) 250px;
+  min-height: 560px;
+}
+.pane {
+  padding: 14px;
+  min-width: 0;
+}
+.props {
+  border-left: 1px solid var(--line);
+}
+.stage {
+  position: relative;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.stagehead {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 14px;
+  flex-wrap: wrap;
+}
+.stagehead strong {
+  font-size: 16px;
+}
+.stagehead .mono {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.canvaswrap {
+  position: relative;
+  padding: 0 14px 6px;
+}
+svg#plan {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+svg.pen-on,
+svg.pen-on .it {
+  cursor: crosshair !important;
+}
+svg .it:focus-visible {
+  outline: none;
+}
+svg .it:focus-visible rect:first-of-type {
+  stroke-dasharray: 5 3;
+}
+
+/* Nút phóng to bản vẽ, cùng hàng với tên phòng */
+.zoombar {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  align-self: center;
+}
+.zoombar .btn {
+  min-width: 36px;
+  justify-content: center;
+  padding: 7px 9px;
+  background: var(--surface);
+}
+.zoombar .btn:disabled:hover {
+  background: var(--surface);
+}
+
+.status {
+  margin: 0 14px 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.status.bad {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+.status.good {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+.legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 8px 14px 14px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* Thanh thao tác nhanh trên điện thoại */
+.mbar {
+  display: none;
+}
+
+@media (max-width: 1020px) {
+  .body {
+    grid-template-columns: 1fr;
+    padding-bottom: 64px;
+  }
+  .stage {
+    order: 1;
+  }
+  .props {
+    order: 2;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .mbar.on {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    gap: 6px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+  }
+  .mbar .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 7px 6px;
+    font-size: 13px;
+    min-width: 0;
+    white-space: nowrap;
+  }
+  /* thanh công cụ gọn: mỗi hàng là một dải cuộn ngang, không xuống dòng */
+  .bar {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .bar > .tabs,
+  .wallsrow > .tabs,
+  .acts {
+    display: flex;
+    flex: 1 0 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 4px;
+  }
+  .acts {
+    gap: 6px;
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+  .bar > .tabs::-webkit-scrollbar,
+  .wallsrow > .tabs::-webkit-scrollbar,
+  .acts::-webkit-scrollbar {
+    display: none;
+  }
+  .bar > .tabs .tab,
+  .wallsrow > .tabs .tab,
+  .acts > * {
+    flex: none;
+    white-space: nowrap;
+  }
+  /* hàng chọn tường: dải tab cuộn ngang, sơ đồ tường thu nhỏ nằm bên phải */
+  .wallsrow {
+    flex: 1 0 100%;
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-width: 0;
+  }
+  .wallsrow > .tabs {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  #mini {
+    width: 44px;
+    height: 33px;
+  }
+  .tab {
+    padding: 7px 9px;
+    font-size: 13px;
+  }
+}
+@media (max-width: 640px) {
+  .tab .lg {
+    display: none;
+  }
+}
+
+.foot {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  max-width: 80ch;
+}

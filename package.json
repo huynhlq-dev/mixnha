@@ -1,0 +1,32 @@
+{
+  "name": "tu-thiet-ke",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Tự Thiết Kế: xếp đồ nội thất 2D / 3D cho căn hộ, chạy hoàn toàn trong trình duyệt",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "validate:items": "tsx tools/validate-items.ts"
+  },
+  "dependencies": {
+    "@fontsource/be-vietnam-pro": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0",
+    "happy-dom": "^21.0.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
+  }
+}

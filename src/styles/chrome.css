@@ -1,0 +1,46 @@
+/* Phần giao diện dùng chung cho trình thiết kế và trang gallery: đầu trang, thanh tab. */
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 16px;
+  flex-wrap: wrap;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+.brand svg {
+  flex: none;
+}
+.files {
+  display: flex;
+  gap: 8px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.tab {
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  min-height: 36px;
+}
+.tab:not([aria-pressed='true']):hover {
+  background: var(--surface2);
+}
+.tab[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--bg);
+}

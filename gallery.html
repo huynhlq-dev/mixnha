@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="robots" content="noindex" />
+    <title>Thư viện đồ · %VITE_APP_NAME%</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <h1 class="brand">
+          <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="2" y="2" width="22" height="22" rx="3" fill="none" stroke="currentColor" stroke-width="2" /><path d="M2 14h10v10M16 2v8h8" fill="none" stroke="currentColor" stroke-width="2" /><rect x="5" y="17" width="5" height="4" style="fill: var(--accent)" /></svg>
+          <span>Thư viện đồ</span>
+        </h1>
+        <a class="btn" href="./index.html">Về trình thiết kế</a>
+      </header>
+
+      <section class="gtools" aria-label="Bộ lọc">
+        <p class="gsummary" id="gSummary" role="status"></p>
+        <div class="grow">
+          <div class="tabs" id="gStatus" role="group" aria-label="Lọc theo trạng thái">
+            <button class="tab" type="button" data-status="all" aria-pressed="true">Tất cả</button>
+            <button class="tab" type="button" data-status="live" aria-pressed="false">Đã đưa lên</button>
+            <button class="tab" type="button" data-status="draft" aria-pressed="false">Đang làm</button>
+            <button class="tab" type="button" data-status="retired" aria-pressed="false">Ngừng dùng</button>
+          </div>
+          <div class="tabs" id="gPlace" role="group" aria-label="Lọc theo loại đặt">
+            <button class="tab" type="button" data-place="all" aria-pressed="true">Sàn và tường</button>
+            <button class="tab" type="button" data-place="floor" aria-pressed="false">Đặt sàn</button>
+            <button class="tab" type="button" data-place="wall" aria-pressed="false">Gắn tường</button>
+          </div>
+          <input class="search" id="gQuery" type="search" placeholder="Tìm theo tên, mã, ghi chú..." aria-label="Tìm món" autocomplete="off" />
+        </div>
+        <div class="grow gscale">
+          <label for="gScale">Tỉ lệ</label>
+          <input id="gScale" type="range" min="0.3" max="2" step="0.1" value="0.8" />
+          <span class="mono" id="gScaleOut"></span>
+          <span class="gruler-box" id="gRuler"></span>
+          <label class="gcheck"><input type="checkbox" id="g3d" checked /> Ảnh 3D</label>
+        </div>
+      </section>
+
+      <main id="gGroups" aria-live="polite"></main>
+      <p class="foot" id="gFoot">Hình vẽ cùng một tỉ lệ nên so được kích thước các món với nhau. Món "Đang làm" chỉ hiện ở trang này, chưa hiện trong thư viện của trình thiết kế.</p>
+    </div>
+    <script type="module" src="/src/gallery/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,219 @@
+/* Trang gallery: xem mọi món theo tỉ lệ thật. Dùng chung màu và nút với trình thiết kế. */
+.gtools {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-bottom: 20px;
+}
+.gsummary {
+  font-size: 14px;
+  color: var(--muted);
+}
+.grow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+.gtools .search {
+  flex: 1 1 220px;
+  min-width: 0;
+  max-width: 360px;
+}
+.gscale {
+  font-size: 13px;
+  color: var(--muted);
+}
+.gscale input[type='range'] {
+  width: 160px;
+  accent-color: var(--accent);
+}
+.gruler-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.gruler {
+  display: inline-block;
+  height: 8px;
+  border: 2px solid var(--ink);
+  border-top: 0;
+  border-radius: 0 0 2px 2px;
+}
+.gcheck {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ggroup {
+  margin-bottom: 28px;
+}
+.ggroup h2 {
+  font-size: 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.gcount {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.gflow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.gcard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: max-content;
+  min-width: 220px;
+  max-width: 100%;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.gcard:target {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.gcard[data-status='retired'] {
+  opacity: 0.8;
+}
+.ghead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.ghead h3 {
+  font-size: 15px;
+}
+.gid {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.badge {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.badge.live {
+  color: var(--ok);
+}
+.badge.draft {
+  color: var(--warn);
+}
+.badge.retired {
+  color: var(--muted);
+}
+
+.gfigs {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.gfig {
+  margin: 0;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.gfig figcaption {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.gsvg {
+  display: block;
+  max-width: none;
+}
+.g3d {
+  width: 144px;
+  height: 144px;
+  border-radius: 8px;
+  background: var(--surface2);
+  display: grid;
+  place-items: center;
+}
+.g3d img {
+  width: 144px;
+  height: 144px;
+  display: block;
+}
+
+.gmeta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.gmeta dt {
+  color: var(--muted);
+}
+.gmeta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.gsw {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+.gbad {
+  color: var(--warn);
+  font-weight: 600;
+}
+.gissues {
+  list-style: none;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface2);
+  font-size: 12.5px;
+  display: grid;
+  gap: 4px;
+}
+.gissues .err {
+  color: var(--warn);
+}
+.gissues .warn {
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .gcard {
+    width: 100%;
+  }
+  .gtools .search {
+    max-width: none;
+  }
+}

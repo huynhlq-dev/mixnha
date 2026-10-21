@@ -1,0 +1,103 @@
+.lib {
+  position: relative;
+  padding: 0;
+  border-right: 1px solid var(--line);
+  overflow: hidden;
+}
+.libin {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: 14px;
+}
+.libhead {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.cat {
+  margin-top: 14px;
+}
+.cat h3 {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  min-height: 44px;
+  cursor: grab;
+}
+.item:hover {
+  background: var(--surface2);
+  border-color: var(--line);
+}
+.item:active {
+  cursor: grabbing;
+}
+.item .sw {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 5px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}
+.item .nm {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  display: block;
+}
+.item .sz {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+@media (max-width: 1020px) {
+  /* điện thoại: thư viện là một ngăn kéo từ đáy màn hình, mở bằng nút Thêm đồ */
+  .lib {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    height: min(62vh, 520px);
+    border: 0;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.2);
+    transform: translateY(105%);
+    visibility: hidden;
+    transition:
+      transform 0.22s ease,
+      visibility 0s 0.22s;
+  }
+  .lib.open {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.22s ease;
+  }
+  .libhead {
+    display: flex;
+    position: sticky;
+    top: -14px;
+    z-index: 1;
+    margin: -14px -14px 10px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+}

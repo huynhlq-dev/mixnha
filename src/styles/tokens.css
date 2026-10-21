@@ -1,0 +1,51 @@
+/* Màu và cỡ chữ dùng chung. Chế độ tối theo cài đặt của máy; thêm data-theme="light" hoặc "dark" trên <html> để ép. */
+:root {
+  --bg: #f2f4f3;
+  --surface: #ffffff;
+  --surface2: #e7ecea;
+  --ink: #15211e;
+  --muted: #4e5f5a;
+  --line: #cbd5d1;
+  --accent: #1e5eff;
+  --accent-ink: #ffffff;
+  --accent-soft: #dce6ff;
+  --warn: #c2410c;
+  --ok: #0f7a4b;
+  --grid: #dde4e1;
+  --font: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0f1614;
+    --surface: #18221f;
+    --surface2: #222e2a;
+    --ink: #e8efec;
+    --muted: #9db0a9;
+    --line: #33423d;
+    --accent: #6f9bff;
+    --accent-ink: #0b1220;
+    --accent-soft: #1d2d55;
+    --warn: #fb923c;
+    --ok: #4ade80;
+    --grid: #26332f;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0f1614;
+  --surface: #18221f;
+  --surface2: #222e2a;
+  --ink: #e8efec;
+  --muted: #9db0a9;
+  --line: #33423d;
+  --accent: #6f9bff;
+  --accent-ink: #0b1220;
+  --accent-soft: #1d2d55;
+  --warn: #fb923c;
+  --ok: #4ade80;
+  --grid: #26332f;
+  color-scheme: dark;
+}

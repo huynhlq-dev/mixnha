@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_ZOOM, Viewport } from '../src/views/viewport';
+import { MAX_ZOOM, unitsPerPixel, Viewport } from '../src/views/viewport';
 
 const BASE = { x: -50, y: -50, w: 500, h: 450 };
 const make = () => {
@@ -85,5 +85,25 @@ describe('vùng nhìn (phóng to, kéo)', () => {
     v.zoomBy(3, { x: 200, y: 200 });
     v.fit();
     expect(v.view()).toEqual(BASE);
+  });
+});
+
+describe('đơn vị bản vẽ trên mỗi pixel', () => {
+  it('khung rộng hơn vùng nhìn: chiều cao quyết định (vùng nhìn co theo chiều chật hơn)', () => {
+    // vùng nhìn 500 x 450 trong khung 900 x 450 px: co theo chiều cao, 1 px = 1 đơn vị
+    expect(unitsPerPixel(BASE, 900, 450)).toBe(1);
+  });
+
+  it('khung hẹp hơn vùng nhìn: chiều rộng quyết định', () => {
+    expect(unitsPerPixel(BASE, 250, 900)).toBe(2);
+  });
+
+  it('khung cùng tỉ lệ thì hai chiều cho cùng một kết quả', () => {
+    expect(unitsPerPixel(BASE, 1000, 900)).toBe(0.5);
+  });
+
+  it('khung chưa có kích thước (chưa hiện) thì không chia cho 0', () => {
+    expect(unitsPerPixel(BASE, 0, 0)).toBe(1);
+    expect(unitsPerPixel(BASE, 100, 0)).toBe(1);
   });
 });

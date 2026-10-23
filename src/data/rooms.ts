@@ -1,10 +1,26 @@
 import type { RoomDef } from './schema';
 
-/** Thứ tự ở đây là thứ tự tab phòng. Thêm phòng mới: thêm id vào đây và một mục trong ROOMS. */
-export const ROOM_IDS = ['ngu', 'khach', 'bep', 'wc'] as const;
-export type RoomId = (typeof ROOM_IDS)[number];
+/**
+ * Các LOẠI phòng trong thư viện (nhóm "Phòng"). Thứ tự ở đây là thứ tự trong thư viện.
+ * Thêm loại mới: thêm mã vào đây và một mục trong ROOMS, rồi chạy npm run validate:items.
+ */
+export const ROOM_TYPE_IDS = ['ngu', 'khach', 'bep', 'wc', 'lamviec', 'trong'] as const;
+export type RoomTypeId = (typeof ROOM_TYPE_IDS)[number];
 
-export const ROOMS: Readonly<Record<RoomId, RoomDef>> = {
+/** Mã của căn hộ mặc định (bốn phòng đầu); mã mặc định cũng là mã loại phòng. */
+export const ROOM_IDS = ['ngu', 'khach', 'bep', 'wc'] as const;
+
+/** Mã một phòng trong căn hộ: chuỗi do app đặt (loại phòng, thêm số nếu trùng: ngu, ngu2...). Xem core/rooms.ts. */
+export type RoomId = string;
+
+/** Một phòng của căn hộ: mã, loại (quyết định cỡ, cửa, bố trí mẫu ban đầu) và tên hiện trên tab, mô hình. */
+export interface RoomEntry {
+  id: RoomId;
+  type: RoomTypeId;
+  name: string;
+}
+
+export const ROOMS: Readonly<Record<RoomTypeId, RoomDef>> = {
   ngu: {
     id: 'ngu',
     name: 'Phòng ngủ',
@@ -101,4 +117,36 @@ export const ROOMS: Readonly<Record<RoomId, RoomDef>> = {
       walls: { T: [['mirror', 155, 130]] },
     },
   },
+  lamviec: {
+    id: 'lamviec',
+    name: 'Phòng làm việc',
+    W: 300,
+    H: 280,
+    ceil: 270,
+    floor: 1,
+    doors: [{ wall: 'B', pos: 30, w: 80 }],
+    windows: [{ wall: 'T', pos: 80, w: 140 }],
+    sample: {
+      floor: [
+        ['desk', 150, 35, 0],
+        ['swivel', 150, 100, 0],
+        ['shelf', 284, 150, 270],
+      ],
+      walls: {},
+    },
+  },
+  trong: {
+    id: 'trong',
+    name: 'Phòng trống',
+    W: 300,
+    H: 300,
+    ceil: 270,
+    floor: 0,
+    doors: [{ wall: 'B', pos: 110, w: 80 }],
+    windows: [],
+    sample: { floor: [], walls: {} },
+  },
 };
+
+/** Căn hộ lúc mới mở lần đầu: bốn phòng mặc định, theo thứ tự tab. */
+export const DEFAULT_ROOMS: readonly RoomEntry[] = ROOM_IDS.map((id) => ({ id, type: id, name: ROOMS[id].name }));

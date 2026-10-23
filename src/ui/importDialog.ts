@@ -1,6 +1,5 @@
 import { escapeHtml } from '../core/format';
 import type { Registry } from '../core/registry';
-import { ROOMS } from '../data/rooms';
 import { checkFileSize, parseDesignFile, type ImportedRoom, type ParsedFile, type ParseResult } from '../storage/file';
 import { openDialog } from './dialog';
 import type { Els } from './els';
@@ -27,7 +26,7 @@ export function previewHtml(f: ParsedFile): string {
   const rows = f.rooms
     .map(
       (r) =>
-        `<div class="rrow"><label><input type="checkbox" data-room="${r.id}" checked>${escapeHtml(ROOMS[r.id].name)}</label><span class="meta">${r.layout.W} × ${r.layout.H} · ${r.itemCount} món</span></div>`,
+        `<div class="rrow"><label><input type="checkbox" data-room="${escapeHtml(r.id)}" checked>${escapeHtml(r.entry.name)}</label><span class="meta">${r.layout.W} × ${r.layout.H} · ${r.itemCount} món</span></div>`,
     )
     .join('');
   const warns = f.warnings.length ? `<ul class="warns">${f.warnings.map((w) => `<li>${escapeHtml(w.message)}</li>`).join('')}</ul>` : '';
@@ -36,7 +35,7 @@ export function previewHtml(f: ParsedFile): string {
     `<div class="prev"><b>${escapeHtml(f.name || 'Bản thiết kế không tên')}</b><span class="meta">${escapeHtml(head)}</span>` +
     (f.note ? `<span class="meta">"${escapeHtml(f.note)}"</span>` : '') +
     `${rows}</div>${warns}` +
-    `<div class="meta">Phòng đã chọn sẽ được thay bằng bản trong file. Bạn vẫn Hoàn tác được.</div>`
+    `<div class="meta">Phòng đã chọn sẽ được thay bằng bản trong file; phòng chưa có trong căn hộ thì được thêm vào. Bạn vẫn Hoàn tác được.</div>`
   );
 }
 

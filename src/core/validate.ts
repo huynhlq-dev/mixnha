@@ -1,4 +1,4 @@
-import type { CategoryDef, ItemDef, RoomDef } from '../data/schema';
+import type { CategoryDef, ItemDef, OpeningPreset, RoomDef } from '../data/schema';
 import { FLOOR_COLORS } from '../data/palettes';
 import { WALL_KEYS } from '../data/walls';
 import { LIMITS } from './limits';
@@ -109,6 +109,37 @@ export function validateData(items: readonly ItemDef[], categories: readonly Cat
         else if (def.status !== 'live') err(r.id, `Bố trí mẫu dùng món "${id}" chưa live (${def.status})`, 'sample');
         if (s < 0 || s > lenOf(wk)) warn(r.id, `Món "${id}" trên tường ${wk} nằm ngoài tường`, 'sample');
       }
+    }
+  }
+  return out;
+}
+
+/**
+ * Kiểm tra các loại cửa đi, cửa sổ trong thư viện: mã không trùng nhau và không trùng mã món (cả hai đi chung đường kéo thả),
+ * chiều rộng hợp lý, cửa sổ có bậu cộng chiều cao không vượt trần thấp nhất (để vừa mọi phòng).
+ */
+export function validateOpeningPresets(presets: readonly OpeningPreset[], itemIds: Iterable<string>): Issue[] {
+  const out: Issue[] = [];
+  const err = (where: string, message: string, field?: string) => out.push({ level: 'error', where, field, message });
+  const items = new Set(itemIds);
+  const seen = new Set<string>();
+  const maxW = LIMITS.roomW.max - 2 * LIMITS.opening.margin;
+  for (const p of presets) {
+    if (!ID_PATTERN.test(p.id)) err(p.id, 'Mã phải bắt đầu bằng chữ thường, chỉ gồm chữ, số và gạch ngang', 'id');
+    if (seen.has(p.id)) err(p.id, 'Mã cửa bị trùng', 'id');
+    seen.add(p.id);
+    if (items.has(p.id)) err(p.id, 'Mã cửa trùng với mã của một món trong thư viện', 'id');
+    if (!p.name.trim()) err(p.id, 'Thiếu tên', 'name');
+    if (p.kind !== 'door' && p.kind !== 'win') err(p.id, `Loại "${String(p.kind)}" không đúng: chỉ có door hoặc win`, 'kind');
+    if (!HEX6.test(p.color)) err(p.id, `Màu "${p.color}" không phải mã hex 6 ký tự (ví dụ #C9A27E)`, 'color');
+    if (!Number.isFinite(p.w) || p.w < LIMITS.opening.minW || p.w > maxW) err(p.id, `Rộng ${p.w} nằm ngoài khoảng ${LIMITS.opening.minW}–${maxW} cm`, 'w');
+    if (p.kind === 'door' && (p.sill !== undefined || p.h !== undefined)) err(p.id, 'Cửa đi không có bậu hay chiều cao riêng (sill, h chỉ dành cho cửa sổ)', 'sill');
+    if (p.kind === 'win') {
+      const sill = p.sill ?? 90;
+      const h = p.h ?? 120;
+      if (!Number.isFinite(sill) || sill < 0) err(p.id, `Bậu ${sill} phải từ 0 cm trở lên`, 'sill');
+      if (!Number.isFinite(h) || h < 10) err(p.id, `Chiều cao ${h} phải từ 10 cm trở lên`, 'h');
+      if (sill + h > LIMITS.ceil.min) err(p.id, `Bậu ${sill} + cao ${h} vượt trần thấp nhất ${LIMITS.ceil.min} cm`, 'h');
     }
   }
   return out;

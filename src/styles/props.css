@@ -171,6 +171,49 @@
 }
 
 /* Bút màu */
+/*
+ * Khối Bút màu: chỉ hiện khi có món đang chọn (hoặc đang dùng bút). Hiện thì trượt vào từ bên phải, ẩn thì trượt ngược ra;
+ * chiều cao co giãn theo để các phần bên dưới dịch lên xuống êm. Lề âm và đệm cùng cỡ để viền focus không bị cắt.
+ */
+.penbox {
+  display: grid;
+  grid-template-rows: 0fr;
+  overflow: hidden;
+  margin: 0 -4px;
+  padding: 0 4px;
+  transition: grid-template-rows 0.24s ease;
+}
+.penbox[data-on='true'] {
+  grid-template-rows: 1fr;
+}
+.peninner {
+  min-height: 0;
+  opacity: 0;
+  transform: translateX(100%);
+  /* ẩn hẳn sau khi trượt ra, để Tab không nhảy vào các nút đang khuất */
+  visibility: hidden;
+  transition:
+    transform 0.24s ease,
+    opacity 0.24s ease,
+    visibility 0s 0.24s;
+}
+.penbox[data-on='true'] .peninner {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  transition:
+    transform 0.24s ease,
+    opacity 0.24s ease,
+    visibility 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .penbox,
+  .peninner,
+  .penbox[data-on='true'] .peninner {
+    transition: none;
+  }
+}
+
 .pen {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
@@ -187,3 +230,28 @@
   background: var(--bg);
   cursor: pointer;
 }
+
+/* Xem cả căn hộ: cột phải là số liệu tổng */
+.aptstats {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  margin: 0;
+  font-size: 13.5px;
+}
+.aptstats dt {
+  color: var(--muted);
+}
+.aptstats dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+.aptinfo .sizes label span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+

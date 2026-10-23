@@ -1,8 +1,9 @@
 import type { WallKey } from '../data/schema';
+import { WALL_KEYS } from '../data/walls';
 import { boxOf, doorGeom, polyOf, polyOfRect, rectsHit, satHit, wallRect, wallLength, type Box } from './geometry';
 import { openingsOn, type Opening, type RoomGeo } from './room';
 import type { Registry } from './registry';
-import type { FloorItem, Layout } from './types';
+import type { FloorItem, Layout, OpeningKind } from './types';
 
 /** Khoảng hẹp nhất giữa hai món (lối đi), nếu có. */
 export interface LaneGap {
@@ -97,6 +98,26 @@ export function analyseWall(layout: Layout, R: RoomGeo, wall: WallKey): WallAnal
     if (b) bad.add(it.uid);
   }
   return { bad, openings };
+}
+
+/** Khóa nhận dạng một cửa đi hoặc cửa sổ trong tập kết quả của overlappingOpenings. */
+export const openingKey = (o: { kind: OpeningKind; uid: number }): string => `${o.kind}:${o.uid}`;
+
+/** Cửa đi, cửa sổ chồng lên nhau trên cùng một tường. Trả về khóa (openingKey) của các chỗ mở bị chồng. */
+export function overlappingOpenings(R: RoomGeo): Set<string> {
+  const bad = new Set<string>();
+  for (const wl of WALL_KEYS) {
+    const list = openingsOn(R, wl);
+    for (let i = 0; i < list.length; i++) {
+      for (let j = i + 1; j < list.length; j++) {
+        if (rectsHit(list[i]!, list[j]!)) {
+          bad.add(openingKey(list[i]!));
+          bad.add(openingKey(list[j]!));
+        }
+      }
+    }
+  }
+  return bad;
 }
 
 /** Khung bao của món sàn, tiện cho các nơi vẽ. */

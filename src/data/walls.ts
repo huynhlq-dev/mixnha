@@ -8,3 +8,5 @@ export const WALL_NAMES: Readonly<Record<WallKey, string>> = {
   B: 'Tường dưới',
   L: 'Tường trái',
 };
+
+export const isWallKey = (v: unknown): v is WallKey => typeof v === 'string' && (WALL_KEYS as readonly string[]).includes(v);

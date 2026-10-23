@@ -11,5 +11,10 @@ import './styles/dialogs.css';
 import { browserKV } from './storage/kv';
 import { App } from './ui/app';
 import { queryEls } from './ui/els';
+import { bindThemeToggle } from './ui/theme';
 
-new App({ els: queryEls(), kv: browserKV() }).start();
+const els = queryEls();
+const kv = browserKV();
+const app = new App({ els, kv });
+bindThemeToggle(els.btnTheme, kv, () => app.themeChanged());
+app.start();

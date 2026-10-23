@@ -1,12 +1,12 @@
 import { normHex } from '../core/color';
 import { assignUids, isRoomId, type NextUid } from '../core/layout';
+import { roomDef } from '../core/rooms';
 import type { Registry } from '../core/registry';
-import type { Layouts } from '../core/types';
-import type { RoomId } from '../data/rooms';
-import { ROOM_IDS } from '../data/rooms';
+import type { AptPlan, Layouts } from '../core/types';
+import { DEFAULT_ROOMS, type RoomEntry, type RoomId } from '../data/rooms';
 import type { KV } from './kv';
 import { CURRENT_VER, migrate, type RawDoc } from './migrations';
-import { cleanText, FIELD_LIMITS, sanitizeSaved } from './sanitize';
+import { cleanText, FIELD_LIMITS, sanitizeApt, sanitizeRoomList, sanitizeSaved } from './sanitize';
 
 /** Khóa lưu trong trình duyệt. Số phiên bản nằm trong nội dung (trường ver), không nằm trong khóa. */
 export const STATE_KEY = 'xepnha2d:state';
@@ -28,14 +28,26 @@ export interface SavedState {
   layouts: Partial<Layouts>;
   pen: PenPrefs | null;
   meta: SavedMeta;
+  /** Vị trí các phòng trong mô hình căn hộ; rỗng nghĩa là để tự xếp. */
+  apt: AptPlan;
+  /** Các phòng của căn hộ theo thứ tự tab. Dữ liệu cũ chưa ghi danh sách thì là bốn phòng mặc định. */
+  rooms: RoomEntry[];
 }
 
-export function serializeState(room: RoomId, layouts: Layouts, pen: PenPrefs, meta?: SavedMeta): string {
-  return JSON.stringify({ ver: CURRENT_VER, room, layouts, pen, ...(meta && (meta.name || meta.note) ? { meta } : {}) });
+export function serializeState(room: RoomId, layouts: Layouts, pen: PenPrefs, meta?: SavedMeta, apt?: AptPlan, rooms?: readonly RoomEntry[]): string {
+  return JSON.stringify({
+    ver: CURRENT_VER,
+    room,
+    ...(rooms ? { rooms } : {}),
+    layouts,
+    pen,
+    ...(meta && (meta.name || meta.note) ? { meta } : {}),
+    ...(apt && Object.keys(apt).length ? { apt } : {}),
+  });
 }
 
-export function saveState(kv: KV, room: RoomId, layouts: Layouts, pen: PenPrefs, meta?: SavedMeta): boolean {
-  return kv.set(STATE_KEY, serializeState(room, layouts, pen, meta));
+export function saveState(kv: KV, room: RoomId, layouts: Layouts, pen: PenPrefs, meta?: SavedMeta, apt?: AptPlan, rooms?: readonly RoomEntry[]): boolean {
+  return kv.set(STATE_KEY, serializeState(room, layouts, pen, meta, apt, rooms));
 }
 
 /**
@@ -56,15 +68,17 @@ export function loadState(kv: KV, reg: Registry, nextUid: NextUid): SavedState |
   const layoutsRaw = doc.layouts;
   if (!layoutsRaw || typeof layoutsRaw !== 'object') return null;
 
+  // dữ liệu cũ chưa ghi danh sách phòng: căn hộ mặc định (bốn phòng đầu, mã trùng với mã đã dùng làm khóa bản vẽ)
+  const rooms = sanitizeRoomList(doc.rooms) ?? DEFAULT_ROOMS.map((r) => ({ ...r }));
   const layouts: Partial<Layouts> = {};
-  for (const id of ROOM_IDS) {
-    const l = sanitizeSaved((layoutsRaw as Record<string, unknown>)[id], id, reg);
+  for (const entry of rooms) {
+    const l = sanitizeSaved((layoutsRaw as Record<string, unknown>)[entry.id], roomDef(entry), reg);
     if (l) {
       assignUids(l, nextUid);
-      layouts[id] = l;
+      layouts[entry.id] = l;
     }
   }
-  const room = isRoomId(doc.room) ? doc.room : ROOM_IDS[0];
+  const room = isRoomId(doc.room) && rooms.some((r) => r.id === doc.room) ? doc.room : rooms[0]!.id;
 
   let pen: PenPrefs | null = null;
   const p = doc.pen as { color?: unknown; recent?: unknown } | undefined;
@@ -75,5 +89,15 @@ export function loadState(kv: KV, reg: Registry, nextUid: NextUid): SavedState |
   }
   const m = doc.meta as { name?: unknown; note?: unknown } | undefined;
   const meta: SavedMeta = { name: cleanText(m?.name, FIELD_LIMITS.maxName), note: cleanText(m?.note, FIELD_LIMITS.maxNote) };
-  return { room, layouts, pen, meta };
+  return {
+    room,
+    layouts,
+    pen,
+    meta,
+    apt: sanitizeApt(
+      doc.apt,
+      rooms.map((r) => r.id),
+    ),
+    rooms,
+  };
 }

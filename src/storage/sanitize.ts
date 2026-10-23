@@ -3,10 +3,12 @@ import { clamp, normDeg } from '../core/geometry';
 import { isUsableLayout } from '../core/layout';
 import { LIMITS, ROOM_DIM_LIMITS, type RoomDimKey } from '../core/limits';
 import type { Registry } from '../core/registry';
-import type { FloorItem, Layout, WallItem } from '../core/types';
+import { fitOpening } from '../core/room';
+import type { AptPlan, DoorItem, FloorItem, Layout, WallItem, WindowItem } from '../core/types';
 import { FLOOR_COLORS, WALL_COLORS } from '../data/palettes';
-import { ROOMS, type RoomId } from '../data/rooms';
-import type { WallKey } from '../data/schema';
+import { isRoomIdString, isRoomTypeId, MAX_ROOM_NAME } from '../core/rooms';
+import { ROOMS, type RoomEntry, type RoomId } from '../data/rooms';
+import type { OpeningDef, RoomDef, WallKey } from '../data/schema';
 import { WALL_KEYS } from '../data/walls';
 
 /**
@@ -47,7 +49,7 @@ export function cleanText(v: unknown, max: number): string {
 
 /* ---------- Cảnh báo ---------- */
 
-export type WarningCode = 'room-clamped' | 'item-clamped' | 'color-reset' | 'items-dropped' | 'unknown-room' | 'custom-items' | 'replaced';
+export type WarningCode = 'room-clamped' | 'item-clamped' | 'color-reset' | 'items-dropped' | 'unknown-room' | 'custom-items' | 'replaced' | 'openings-fixed';
 
 export interface ImportWarning {
   code: WarningCode;
@@ -70,6 +72,7 @@ export class Tally {
       'unknown-room': (n) => `${n} phòng trong file không có trong trang này nên bị bỏ qua.`,
       'custom-items': (n) => `${n} món không có trong thư viện, giữ theo kích thước ghi trong file (món tùy chỉnh).`,
       replaced: (n) => `${n} món đã ngừng dùng, được thay bằng món mới trong thư viện.`,
+      'openings-fixed': (n) => `${n} cửa đi hoặc cửa sổ có tường, vị trí hoặc số đo không hợp lệ nên đã chỉnh lại hoặc bỏ qua.`,
     };
     return [...this.m.entries()].map(([code, count]) => ({ code, count, message: text[code](count) }));
   }
@@ -189,6 +192,70 @@ function sanitizeWall(raw: unknown, reg: Registry, t: Tally): WallItem | null {
   return item;
 }
 
+/* ---------- Cửa đi, cửa sổ ---------- */
+
+const isWall = (v: unknown): v is WallKey => typeof v === 'string' && (WALL_KEYS as readonly string[]).includes(v);
+
+interface RoomBox {
+  W: number;
+  H: number;
+  ceil: number;
+}
+
+/** Một cửa đi hoặc cửa sổ trong file. Sai tường hoặc thiếu số thì bỏ; số ngoài khoảng thì kéo vào gọn trong tường. */
+function cleanOpening(raw: unknown, room: RoomBox, t: Tally): (OpeningDef & { uid: number }) | null {
+  const pos = isObj(raw) ? num(raw.pos) : null;
+  const w = isObj(raw) ? num(raw.w) : null;
+  if (!isObj(raw) || !isWall(raw.wall) || pos === null || w === null) {
+    t.add('openings-fixed');
+    return null;
+  }
+  const asked = { uid: 0, wall: raw.wall, pos: Math.round(pos), w: Math.round(w) };
+  const fitted = fitOpening(asked, room.W, room.H);
+  if (fitted.pos !== asked.pos || fitted.w !== asked.w) t.add('openings-fixed');
+  return fitted;
+}
+
+/** Cửa đi: thêm hướng mở cánh. Chỉ ghi giá trị khác mặc định; giá trị lạ thì coi như mặc định. */
+function cleanDoor(raw: unknown, room: RoomBox, t: Tally): DoorItem | null {
+  const door: DoorItem | null = cleanOpening(raw, room, t);
+  if (!door) return null;
+  const r = raw as Record<string, unknown>;
+  if (r.hinge === 'end') door.hinge = 'end';
+  if (r.swing === 'out') door.swing = 'out';
+  return door;
+}
+
+function cleanWindow(raw: unknown, room: RoomBox, t: Tally): WindowItem | null {
+  const base = cleanOpening(raw, room, t);
+  if (!base) return null;
+  const win: WindowItem = base;
+  const r = raw as Record<string, unknown>;
+  const sill = num(r.sill);
+  if (sill !== null) win.sill = clamp(Math.round(sill), 0, Math.max(0, room.ceil - 10));
+  const h = num(r.h);
+  if (h !== null) win.h = clamp(Math.round(h), 10, Math.max(10, room.ceil - (win.sill ?? 0)));
+  return win;
+}
+
+/**
+ * Danh sách cửa của một phòng. File không ghi (file cũ, hoặc ghi không phải danh sách) thì dùng cửa mặc định của phòng.
+ * File có ghi thì tin file, kể cả danh sách rỗng. Quá nhiều thì bỏ phần dư.
+ */
+function openingList<D extends OpeningDef, T>(raw: unknown, defaults: readonly D[], make: (d: D) => T, clean: (r: unknown) => T | null, t: Tally): T[] {
+  if (!Array.isArray(raw)) {
+    if (raw !== undefined) t.add('openings-fixed');
+    return defaults.map(make);
+  }
+  if (raw.length > LIMITS.maxOpeningsPerKind) t.add('openings-fixed', raw.length - LIMITS.maxOpeningsPerKind);
+  const out: T[] = [];
+  for (const r of raw.slice(0, LIMITS.maxOpeningsPerKind)) {
+    const o = clean(r);
+    if (o) out.push(o);
+  }
+  return out;
+}
+
 /* ---------- Cả phòng ---------- */
 
 export type RoomResult =
@@ -197,9 +264,9 @@ export type RoomResult =
   | { ok: false; code: 'too-many'; detail: string };
 
 /** Làm sạch một phòng. uid của mọi món là 0, gán mã thật bằng assignUids khi đưa vào ứng dụng. */
-export function sanitizeRoom(raw: unknown, id: RoomId, reg: Registry, t: Tally): RoomResult {
+export function sanitizeRoom(raw: unknown, def: RoomDef, reg: Registry, t: Tally): RoomResult {
+  const id = def.id;
   if (!isObj(raw)) return { ok: false, code: 'invalid', detail: `phòng "${id}" không phải một đối tượng` };
-  const def = ROOMS[id];
   const dim = (key: RoomDimKey, fallback: number): number => {
     const v = num(raw[key]);
     if (v === null) {
@@ -226,14 +293,15 @@ export function sanitizeRoom(raw: unknown, id: RoomId, reg: Registry, t: Tally):
   if (total > LIMITS.maxItemsPerRoom) return { ok: false, code: 'too-many', detail: `phòng "${def.name}" có ${total} món` };
 
   const walls = { T: [], R: [], B: [], L: [] } as Record<WallKey, WallItem[]>;
+  const box: RoomBox = { W: dim('W', def.W), H: dim('H', def.H), ceil: dim('ceil', def.ceil) };
   const layout: Layout = {
-    W: dim('W', def.W),
-    H: dim('H', def.H),
-    ceil: dim('ceil', def.ceil),
+    ...box,
     floor: colorOr(raw.floor, FLOOR_COLORS[def.floor]?.hex ?? FLOOR_COLORS[0]!.hex, t),
     wall: colorOr(raw.wall, WALL_COLORS[0]!.hex, t),
     items: [],
     walls,
+    doors: openingList(raw.doors, def.doors, (d) => fitOpening({ ...d, uid: 0 }, box.W, box.H), (r) => cleanDoor(r, box, t), t),
+    windows: openingList(raw.windows, def.windows, (d) => fitOpening({ ...d, uid: 0 }, box.W, box.H), (r) => cleanWindow(r, box, t), t),
   };
   for (const r of itemsRaw) {
     const it = sanitizeFloor(r, reg, t);
@@ -252,8 +320,45 @@ export function sanitizeRoom(raw: unknown, id: RoomId, reg: Registry, t: Tally):
  * Làm sạch bố trí đọc từ bộ nhớ trình duyệt. Cấu trúc hỏng thì trả về null để app dùng bố trí mẫu
  * (khác với file nhập, nơi thiếu trường được bỏ qua, ở đây thiếu trường nghĩa là dữ liệu đã hỏng).
  */
-export function sanitizeSaved(raw: unknown, id: RoomId, reg: Registry): Layout | null {
+export function sanitizeSaved(raw: unknown, def: RoomDef, reg: Registry): Layout | null {
   if (!isUsableLayout(raw)) return null;
-  const res = sanitizeRoom(raw, id, reg, new Tally());
+  const res = sanitizeRoom(raw, def, reg, new Tally());
   return res.ok ? res.layout : null;
+}
+
+/**
+ * Vị trí các phòng trong mô hình căn hộ, từ file hoặc dữ liệu tự lưu. Chỉ giữ phòng có mã hợp lệ (và nằm trong `ids` nếu có)
+ * cùng hai số hữu hạn; làm tròn cm và kẹp trong khoảng hợp lý để bản vẽ không vỡ vì số quá lớn.
+ * Không phải đối tượng thì coi như chưa có vị trí nào.
+ */
+export function sanitizeApt(raw: unknown, ids?: readonly RoomId[]): AptPlan {
+  const out: AptPlan = {};
+  if (!isObj(raw)) return out;
+  for (const id of ids ?? Object.keys(raw)) {
+    if (!isRoomIdString(id)) continue;
+    const v = raw[id];
+    if (!isObj(v)) continue;
+    const x = num(v.x);
+    const y = num(v.y);
+    if (x === null || y === null) continue;
+    out[id] = { x: Math.round(clamp(x, -FIELD_LIMITS.maxCoord, FIELD_LIMITS.maxCoord)), y: Math.round(clamp(y, -FIELD_LIMITS.maxCoord, FIELD_LIMITS.maxCoord)) };
+  }
+  return out;
+}
+
+/**
+ * Danh sách phòng của căn hộ, từ file hoặc dữ liệu tự lưu: mã hợp lệ và không trùng, loại có trong trang này, tên là văn bản thuần
+ * (thiếu thì lấy tên loại), tối đa LIMITS.maxRooms phòng. Không có mục nào dùng được thì null (để dùng căn hộ mặc định).
+ */
+export function sanitizeRoomList(raw: unknown): RoomEntry[] | null {
+  if (!Array.isArray(raw)) return null;
+  const out: RoomEntry[] = [];
+  const seen = new Set<string>();
+  for (const r of raw) {
+    if (!isObj(r) || !isRoomIdString(r.id) || seen.has(r.id) || !isRoomTypeId(r.type)) continue;
+    seen.add(r.id);
+    out.push({ id: r.id, type: r.type, name: cleanText(r.name, MAX_ROOM_NAME) || ROOMS[r.type].name });
+    if (out.length >= LIMITS.maxRooms) break;
+  }
+  return out.length ? out : null;
 }

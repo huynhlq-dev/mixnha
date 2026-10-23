@@ -18,6 +18,12 @@
 .brand svg {
   flex: none;
 }
+.topbtns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .files {
   display: flex;
   gap: 8px;

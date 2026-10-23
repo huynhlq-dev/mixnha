@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { hexMix } from '../src/core/color';
 import { LIMITS } from '../src/core/limits';
+import { flipDoorHinge, moveOpening, toggleDoorSwing } from '../src/core/ops';
 import { cloneLayout, countItems, freshLayout, maxUid } from '../src/core/layout';
 import { createRegistry, registry } from '../src/core/registry';
 import type { Layout, Layouts } from '../src/core/types';
 import { CATEGORIES } from '../src/data/categories';
-import { ROOMS, ROOM_IDS, type RoomId } from '../src/data/rooms';
+import { DEFAULT_ROOMS, ROOMS, ROOM_IDS, type RoomEntry, type RoomId } from '../src/data/rooms';
 import type { ItemDef } from '../src/data/schema';
 import { WALL_KEYS } from '../src/data/walls';
 import * as backup from '../src/storage/backup';
@@ -22,9 +23,10 @@ import {
   summarizeExport,
 } from '../src/storage/file';
 import { History } from '../src/storage/history';
+import { sanitizeApt, sanitizeRoomList } from '../src/storage/sanitize';
 import { browserKV, memoryKV, type KV } from '../src/storage/kv';
 import { CURRENT_VER, migrate } from '../src/storage/migrations';
-import { loadState, saveState, STATE_KEY } from '../src/storage/save';
+import { loadState, saveState, serializeState, STATE_KEY } from '../src/storage/save';
 
 const load = (kv: KV) => loadState(kv, registry, () => nextUid());
 
@@ -180,6 +182,7 @@ describe('tự lưu trong trình duyệt', () => {
     for (const l of Object.values(s.layouts)) {
       for (const i of l!.items) uids.push(i.uid);
       for (const w of WALL_KEYS) for (const i of l!.walls[w]) uids.push(i.uid);
+      for (const o of [...l!.doors, ...l!.windows]) uids.push(o.uid);
     }
     expect(uids.length).toBeGreaterThan(10);
     expect(new Set(uids).size).toBe(uids.length);
@@ -345,12 +348,12 @@ describe('nhắc sao lưu', () => {
 /* ---------- Nâng phiên bản dữ liệu ---------- */
 
 describe('nâng phiên bản dữ liệu', () => {
-  it('bản 2 lên bản 3: làm nhạt màu tường ở cả khóa layouts và rooms, giữ nguyên phần còn lại', () => {
+  it('bản 2 lên bản hiện tại: làm nhạt màu tường ở cả khóa layouts và rooms, giữ nguyên phần còn lại', () => {
     const wall = (hex: string) => ({ W: 400, H: 300, ceil: 270, floor: '#e2c9a4', wall: hex, items: [], walls: { T: [], R: [], B: [], L: [] } });
     const out = migrate({ ver: 2, name: 'x', layouts: { ngu: wall('#5c6b66') }, rooms: { khach: wall('#dce8e4'), bep: wall('hỏng') } });
     expect(out.from).toBe(2);
     const d = out.doc as { ver: number; name: string; layouts: Record<string, Layout>; rooms: Record<string, Layout> };
-    expect(d.ver).toBe(3);
+    expect(d.ver).toBe(CURRENT_VER);
     expect(d.name).toBe('x');
     expect(d.layouts.ngu!.wall).toBe(hexMix('#5c6b66', 0.82));
     expect(d.rooms.khach!.wall).toBe(hexMix('#dce8e4', 0.82));
@@ -472,8 +475,11 @@ describe('nhập file: vòng xuất rồi nhập', () => {
     const l = layoutFromImported(room, () => ++n);
     expect(l.items.map((i) => i.uid)).toEqual([501, 502]);
     expect(l.walls.L[0]!.uid).toBe(503);
+    // file không ghi cửa thì dùng cửa mặc định của phòng ngủ (một cửa đi, một cửa sổ), cũng được gán uid
+    expect([l.doors[0]!.uid, l.windows[0]!.uid]).toEqual([504, 505]);
     expect(room.layout.items.every((i) => i.uid === 0)).toBe(true);
-    expect(maxUid({ ngu: l })).toBe(503);
+    expect(room.layout.doors.every((o) => o.uid === 0)).toBe(true);
+    expect(maxUid({ ngu: l })).toBe(505);
   });
 });
 
@@ -709,5 +715,441 @@ describe('nhập file: một phòng, đủ điều kiện dùng ngay', () => {
     const rooms = Object.fromEntries(ROOM_IDS.map((id) => [id, roomJson()]));
     const f = parseOk(fileJson(rooms));
     expect(f.rooms.map((r) => r.id as RoomId)).toEqual([...ROOM_IDS]);
+  });
+});
+
+/* ---------- Cửa đi, cửa sổ ---------- */
+
+describe('cửa đi và cửa sổ trong file và dữ liệu tự lưu', () => {
+  const door = (extra: Record<string, unknown> = {}) => ({ wall: 'B', pos: 30, w: 80, ...extra });
+  const strip = <T extends { uid: number }>(list: T[]) => list.map(({ uid: _uid, ...rest }) => rest);
+
+  it('file xuất ghi cửa (không có uid); dời cửa rồi xuất, nhập lại vẫn đúng chỗ', () => {
+    const layouts = sampleLayouts();
+    layouts.ngu.doors[0]!.wall = 'L';
+    layouts.ngu.doors[0]!.pos = 120;
+    const text = serializeFile(buildFile(layouts, { scope: 'room', room: 'ngu', now: NOW }));
+    const json = JSON.parse(text) as { rooms: { ngu: { doors: unknown[]; windows: unknown[] } } };
+    expect(json.rooms.ngu.doors).toEqual([{ wall: 'L', pos: 120, w: 80 }]);
+    expect(json.rooms.ngu.windows).toEqual([{ wall: 'T', pos: 110, w: 180 }]);
+    expect(text).not.toContain('uid');
+    const f = parseOk(text);
+    expect(f.warnings).toEqual([]);
+    expect(f.rooms[0]!.layout.doors).toEqual([{ uid: 0, wall: 'L', pos: 120, w: 80 }]);
+  });
+
+  it('file không ghi cửa (bản cũ) thì dùng cửa mặc định của phòng, không cảnh báo', () => {
+    const f = parseOk(fileJson({ ngu: roomJson(), bep: roomJson({ W: 320, H: 320 }) }));
+    expect(f.warnings).toEqual([]);
+    expect(strip(f.rooms[0]!.layout.doors)).toEqual(ROOMS.ngu.doors);
+    expect(strip(f.rooms[0]!.layout.windows)).toEqual(ROOMS.ngu.windows);
+    expect(strip(f.rooms[1]!.layout.doors)).toEqual(ROOMS.bep.doors);
+  });
+
+  it('file ghi danh sách rỗng thì phòng không có cửa (tin vào file)', () => {
+    const f = parseOk(fileJson({ ngu: roomJson({ doors: [], windows: [] }) }));
+    expect(f.rooms[0]!.layout.doors).toEqual([]);
+    expect(f.rooms[0]!.layout.windows).toEqual([]);
+    expect(f.warnings).toEqual([]);
+  });
+
+  it('mục sai thì bỏ, số ngoài khoảng thì kéo vào tường, cả hai đều báo một dòng', () => {
+    const f = parseOk(
+      fileJson({
+        ngu: roomJson({
+          doors: [door(), { wall: 'X', pos: 1, w: 80 }, { wall: 'T', pos: 'a', w: 80 }, 'rác', null],
+          windows: [{ wall: 'R', pos: -50, w: 9999, sill: 'x', h: 5000 }],
+        }),
+      }),
+    );
+    const l = f.rooms[0]!.layout;
+    expect(strip(l.doors)).toEqual([door()]);
+    // tường phải dài 350: rộng tối đa 340, chừa mép 5; cao không vượt trần 270; sill không phải số thì để mặc định
+    expect(strip(l.windows)).toEqual([{ wall: 'R', pos: 5, w: 340, h: 270 }]);
+    expect(f.warnings.map((w) => [w.code, w.count])).toEqual([['openings-fixed', 5]]);
+  });
+
+  it('cửa sổ: bậu và chiều cao bị kẹp theo trần phòng, làm tròn thành số nguyên', () => {
+    const f = parseOk(fileJson({ ngu: roomJson({ windows: [{ wall: 'T', pos: 100.4, w: 120.6, sill: 400, h: 100 }] }) }));
+    const w = f.rooms[0]!.layout.windows[0]!;
+    expect([w.pos, w.w]).toEqual([100, 121]);
+    expect(w.sill).toBe(260); // trần 270 trừ 10
+    expect(w.h).toBe(10);
+  });
+
+  it('quá nhiều cửa thì giữ phần đầu và báo phần dư', () => {
+    const f = parseOk(fileJson({ ngu: roomJson({ doors: Array.from({ length: 15 }, (_, i) => door({ pos: 5 + i * 20, w: 30 })) }) }));
+    expect(f.rooms[0]!.layout.doors).toHaveLength(12);
+    expect(f.warnings.map((w) => [w.code, w.count])).toEqual([['openings-fixed', 3]]);
+  });
+
+  it('trường doors không phải danh sách thì dùng cửa mặc định và báo', () => {
+    const f = parseOk(fileJson({ ngu: roomJson({ doors: 5 }) }));
+    expect(strip(f.rooms[0]!.layout.doors)).toEqual(ROOMS.ngu.doors);
+    expect(warningCodes(f)).toEqual(['openings-fixed']);
+  });
+
+  it('thu nhỏ phòng trong file thì cửa cũng được kéo vào tường', () => {
+    const f = parseOk(fileJson({ ngu: roomJson({ W: 200, windows: [{ wall: 'T', pos: 110, w: 180 }] }) }));
+    expect(f.rooms[0]!.layout.windows[0]).toMatchObject({ wall: 'T', pos: 15, w: 180 });
+    expect(warningCodes(f)).toEqual(['openings-fixed']);
+  });
+
+  it('dữ liệu tự lưu của bản cũ (chưa có doors, windows) đọc lại có cửa mặc định', () => {
+    const raw = JSON.parse(JSON.stringify({ ver: 3, room: 'ngu', layouts: sampleLayouts() })) as { layouts: Record<string, Record<string, unknown>> };
+    for (const l of Object.values(raw.layouts)) {
+      delete l.doors;
+      delete l.windows;
+    }
+    const s = load(memoryKV({ [STATE_KEY]: JSON.stringify(raw) }))!;
+    for (const id of ROOM_IDS) {
+      expect(strip(s.layouts[id]!.doors)).toEqual(ROOMS[id].doors);
+      expect(strip(s.layouts[id]!.windows)).toEqual(ROOMS[id].windows);
+    }
+  });
+
+  it('cửa đã dời được tự lưu rồi đọc lại đúng chỗ, mỗi cửa có uid mới', () => {
+    const layouts = sampleLayouts();
+    moveOpening(layouts.khach, layouts.khach.windows[0]!, 'T', 200, true);
+    const kv = memoryKV();
+    saveState(kv, 'khach', layouts, { color: '#e3b7a0', recent: [] });
+    uid = 5000;
+    const s = load(kv)!;
+    expect(strip(s.layouts.khach!.windows)).toEqual([{ wall: 'T', pos: 200, w: 180 }]);
+    expect(s.layouts.khach!.windows[0]!.uid).toBeGreaterThanOrEqual(5000);
+  });
+
+  it('hướng mở cánh đi qua file: chỉ ghi giá trị khác mặc định, giá trị lạ thì bỏ', () => {
+    const layouts = sampleLayouts();
+    flipDoorHinge(layouts.ngu.doors[0]!);
+    toggleDoorSwing(layouts.ngu.doors[0]!);
+    const json = JSON.parse(serializeFile(buildFile(layouts, { scope: 'all', room: 'ngu', now: NOW }))) as { rooms: Record<string, { doors: unknown[] }> };
+    expect(json.rooms.ngu!.doors).toEqual([{ wall: 'B', pos: 30, w: 80, hinge: 'end', swing: 'out' }]);
+    expect(json.rooms.khach!.doors).toEqual([{ wall: 'B', pos: 40, w: 90 }]);
+    const f = parseOk(JSON.stringify({ app: FILE_APP, ver: CURRENT_VER, units: 'cm', scope: 'all', rooms: Object.fromEntries(Object.entries(json.rooms).map(([k, v]) => [k, { ...roomJson(), ...v }])) }));
+    expect(f.warnings).toEqual([]);
+    expect(f.rooms[0]!.layout.doors[0]).toMatchObject({ wall: 'B', pos: 30, w: 80, hinge: 'end', swing: 'out' });
+    const odd = parseOk(fileJson({ ngu: roomJson({ doors: [door({ hinge: 'middle', swing: 5 }), door({ pos: 150, hinge: 'start', swing: 'in' })] }) }));
+    expect(strip(odd.rooms[0]!.layout.doors)).toEqual([door(), door({ pos: 150 })]);
+    expect(odd.warnings).toEqual([]);
+  });
+
+  it('cửa sổ không có hướng mở cánh: hinge, swing trong file bị bỏ', () => {
+    const f = parseOk(fileJson({ ngu: roomJson({ windows: [{ wall: 'T', pos: 100, w: 100, hinge: 'end', swing: 'out' }] }) }));
+    expect(strip(f.rooms[0]!.layout.windows)).toEqual([{ wall: 'T', pos: 100, w: 100 }]);
+  });
+
+  it('Hoàn tác khôi phục hướng mở cánh', () => {
+    const layouts = sampleLayouts();
+    const h = new History();
+    h.reset(layouts);
+    toggleDoorSwing(layouts.ngu.doors[0]!);
+    expect(h.commit('ngu', layouts.ngu, false)).toBe(true);
+    expect(h.undo('ngu')!.doors[0]!.swing).toBeUndefined();
+    expect(h.redo('ngu')!.doors[0]!.swing).toBe('out');
+  });
+
+  it('bản 3 lên bản 4: chỉ tăng số bản, giữ nguyên phần còn lại', () => {
+    const doc = { ver: 3, name: 'x', rooms: { ngu: { W: 400 } } };
+    const out = migrate(doc);
+    expect(out.from).toBe(3);
+    expect(out.doc).toEqual({ ...doc, ver: 4 });
+    expect(CURRENT_VER).toBe(4);
+  });
+
+  it('Hoàn tác và Làm lại khôi phục chỗ cũ của cửa', () => {
+    const layouts = sampleLayouts();
+    const h = new History();
+    h.reset(layouts);
+    moveOpening(layouts.ngu, layouts.ngu.doors[0]!, 'L', 100, true);
+    expect(h.commit('ngu', layouts.ngu, false)).toBe(true);
+    const back = h.undo('ngu')!;
+    expect(back.doors[0]).toMatchObject({ wall: 'B', pos: 30, w: 80 });
+    expect(h.redo('ngu')!.doors[0]).toMatchObject({ wall: 'L', pos: 100 });
+  });
+});
+
+/* ---------- Vị trí các phòng trong mô hình căn hộ ---------- */
+
+describe('vị trí các phòng trong căn hộ (tự lưu và file)', () => {
+  const pen = { color: '#e3b7a0', recent: [] as string[] };
+
+  it('sanitizeApt: giữ phòng hợp lệ, làm tròn, kẹp, bỏ mục sai', () => {
+    expect(sanitizeApt({ ngu: { x: 10.6, y: -20.4 }, khach: { x: 99999, y: -99999 }, bep: { x: 'a', y: 1 }, wc: 5, 'Garage 1': { x: 1, y: 2 } })).toEqual({
+      ngu: { x: 11, y: -20 },
+      khach: { x: 10000, y: -10000 },
+    });
+    // có danh sách mã thì chỉ giữ mã trong danh sách (phòng thêm sau có mã tự đặt)
+    expect(sanitizeApt({ ngu: { x: 1, y: 2 }, ngu2: { x: 3, y: 4 }, khach: { x: 5, y: 6 } }, ['ngu', 'ngu2'])).toEqual({ ngu: { x: 1, y: 2 }, ngu2: { x: 3, y: 4 } });
+    expect(sanitizeApt(null)).toEqual({});
+    expect(sanitizeApt([1, 2])).toEqual({});
+    expect(sanitizeApt('x')).toEqual({});
+    expect(sanitizeApt({ ngu: { x: Number.NaN, y: 0 } })).toEqual({});
+  });
+
+  it('tự lưu rồi đọc lại đúng vị trí; chưa chỉnh thì không ghi trường apt', () => {
+    const layouts = sampleLayouts();
+    const kv = memoryKV();
+    saveState(kv, 'ngu', layouts, pen, undefined, { ngu: { x: 700, y: -50 }, wc: { x: 0, y: 900 } });
+    expect(load(kv)!.apt).toEqual({ ngu: { x: 700, y: -50 }, wc: { x: 0, y: 900 } });
+    expect(JSON.parse(serializeState('ngu', layouts, pen)).apt).toBeUndefined();
+    expect(JSON.parse(serializeState('ngu', layouts, pen, undefined, {})).apt).toBeUndefined();
+    const kv2 = memoryKV();
+    saveState(kv2, 'ngu', layouts, pen);
+    expect(load(kv2)!.apt).toEqual({});
+  });
+
+  it('dữ liệu tự lưu cũ (chưa có apt) đọc lại được, vị trí rỗng', () => {
+    const raw = JSON.parse(JSON.stringify({ ver: CURRENT_VER, room: 'ngu', layouts: sampleLayouts() }));
+    expect(load(memoryKV({ [STATE_KEY]: JSON.stringify(raw) }))!.apt).toEqual({});
+  });
+
+  it('vị trí hỏng trong dữ liệu tự lưu thì bỏ, không làm hỏng cả bản vẽ', () => {
+    const raw = JSON.parse(JSON.stringify({ ver: CURRENT_VER, room: 'ngu', layouts: sampleLayouts(), apt: { ngu: { x: 'oops' }, bep: { x: 5, y: 6 } } }));
+    const s = load(memoryKV({ [STATE_KEY]: JSON.stringify(raw) }))!;
+    expect(s.apt).toEqual({ bep: { x: 5, y: 6 } });
+    expect(Object.keys(s.layouts)).toHaveLength(4);
+  });
+
+  it('xuất cả căn: file ghi apartment; xuất một phòng hoặc chưa chỉnh thì không ghi', () => {
+    const layouts = sampleLayouts();
+    const apt = { ngu: { x: 1, y: 2 }, khach: { x: 3, y: 4 } };
+    expect(buildFile(layouts, { scope: 'all', room: 'ngu', now: NOW, apt }).apartment).toEqual(apt);
+    expect(buildFile(layouts, { scope: 'room', room: 'ngu', now: NOW, apt }).apartment).toBeUndefined();
+    expect(buildFile(layouts, { scope: 'all', room: 'ngu', now: NOW }).apartment).toBeUndefined();
+    expect(buildFile(layouts, { scope: 'all', room: 'ngu', now: NOW, apt: {} }).apartment).toBeUndefined();
+  });
+
+  it('nhập file: đọc lại apartment (đã làm sạch); file không có thì rỗng', () => {
+    const layouts = sampleLayouts();
+    const apt = { ngu: { x: 700, y: -50 }, wc: { x: 12, y: 34 } };
+    const text = serializeFile(buildFile(layouts, { scope: 'all', room: 'ngu', now: NOW, apt }));
+    expect(text).toContain('"apartment"');
+    const f = parseOk(text);
+    expect(f.apt).toEqual(apt);
+    expect(f.warnings).toEqual([]);
+    expect(parseOk(fileJson({ ngu: roomJson() })).apt).toEqual({});
+    // chỉ giữ vị trí của phòng có trong file; số hỏng thì bỏ
+    expect(parseOk(fileJson({ ngu: roomJson(), bep: roomJson() }, { apartment: { ngu: { x: 1e9, y: 'x' }, bep: { x: 1, y: 2 }, wc: { x: 3, y: 4 } } })).apt).toEqual({ bep: { x: 1, y: 2 } });
+  });
+});
+
+/* ---------- Danh sách phòng của căn hộ (thêm, xóa, đổi tên phòng) ---------- */
+
+describe('danh sách phòng của căn hộ', () => {
+  const pen = { color: '#e3b7a0', recent: [] as string[] };
+  /** Căn hộ có hai phòng ngủ, một phòng làm việc, không có bếp và vệ sinh. */
+  const custom: RoomEntry[] = [
+    { id: 'khach', type: 'khach', name: 'Phòng khách' },
+    { id: 'ngu', type: 'ngu', name: 'Phòng ngủ chính' },
+    { id: 'ngu2', type: 'ngu', name: 'Phòng con' },
+    { id: 'lamviec', type: 'lamviec', name: 'Phòng làm việc' },
+  ];
+  const customLayouts = (): Layouts => {
+    uid = 1;
+    return Object.fromEntries(custom.map((e) => [e.id, freshLayout({ ...ROOMS[e.type], id: e.id, name: e.name }, registry, nextUid)])) as Layouts;
+  };
+
+  it('sanitizeRoomList: giữ mục hợp lệ, bỏ mã trùng, loại lạ, mã hỏng; tên thiếu thì lấy tên loại', () => {
+    const out = sanitizeRoomList([
+      { id: 'ngu', type: 'ngu', name: '  Phòng <b>con</b> ' },
+      { id: 'ngu', type: 'bep', name: 'trùng mã' },
+      { id: 'x1', type: 'garage', name: 'loại lạ' },
+      { id: 'Bad Id', type: 'ngu', name: 'mã hỏng' },
+      { id: 'bep', type: 'bep' },
+      'xyz',
+      null,
+    ]);
+    expect(out).toEqual([
+      { id: 'ngu', type: 'ngu', name: 'Phòng con' },
+      { id: 'bep', type: 'bep', name: ROOMS.bep.name },
+    ]);
+  });
+
+  it('sanitizeRoomList: không phải mảng hoặc không còn mục nào thì null; quá giới hạn thì cắt', () => {
+    expect(sanitizeRoomList(undefined)).toBeNull();
+    expect(sanitizeRoomList({})).toBeNull();
+    expect(sanitizeRoomList([])).toBeNull();
+    expect(sanitizeRoomList([{ id: 'A', type: 'ngu' }])).toBeNull();
+    const many = Array.from({ length: LIMITS.maxRooms + 5 }, (_, i) => ({ id: `p${i}`, type: 'trong', name: `P${i}` }));
+    expect(sanitizeRoomList(many)).toHaveLength(LIMITS.maxRooms);
+  });
+
+  it('sanitizeRoomList: tên quá dài bị cắt', () => {
+    const [r] = sanitizeRoomList([{ id: 'ngu', type: 'ngu', name: 'x'.repeat(500) }])!;
+    expect(r!.name.length).toBeLessThanOrEqual(40);
+  });
+
+  it('tự lưu rồi đọc lại đúng danh sách, bố cục từng phòng, phòng đang mở và vị trí', () => {
+    const kv = memoryKV();
+    const layouts = customLayouts();
+    layouts.ngu2.items[0]!.x = 77;
+    saveState(kv, 'ngu2', layouts, pen, undefined, { ngu2: { x: 5, y: 6 }, khach: { x: 0, y: 0 } }, custom);
+    const s = load(kv)!;
+    expect(s.rooms).toEqual(custom);
+    expect(s.room).toBe('ngu2');
+    expect(Object.keys(s.layouts).sort()).toEqual(custom.map((e) => e.id).sort());
+    expect(s.layouts.ngu2!.items[0]!.x).toBe(77);
+    expect(s.apt).toEqual({ ngu2: { x: 5, y: 6 }, khach: { x: 0, y: 0 } });
+  });
+
+  it('phòng đang mở không còn trong danh sách thì mở phòng đầu danh sách', () => {
+    const kv = memoryKV();
+    saveState(kv, 'bep', customLayouts(), pen, undefined, undefined, custom);
+    expect(load(kv)!.room).toBe('khach');
+  });
+
+  it('dữ liệu tự lưu cũ (chưa có danh sách phòng) đọc lại thành bốn phòng mặc định', () => {
+    const raw = JSON.stringify({ ver: CURRENT_VER, room: 'bep', layouts: sampleLayouts() });
+    const s = load(memoryKV({ [STATE_KEY]: raw }))!;
+    expect(s.rooms).toEqual(DEFAULT_ROOMS);
+    expect(s.room).toBe('bep');
+    expect(Object.keys(s.layouts).sort()).toEqual([...ROOM_IDS].sort());
+  });
+
+  it('bố cục của phòng mới (loại làm việc) được làm sạch theo cỡ của loại đó', () => {
+    const kv = memoryKV();
+    const layouts = customLayouts();
+    saveState(kv, 'lamviec', layouts, pen, undefined, undefined, custom);
+    const s = load(kv)!;
+    expect(s.layouts.lamviec!.W).toBe(ROOMS.lamviec.W);
+    expect(s.layouts.lamviec!.doors).toBeDefined();
+  });
+
+  it('danh sách hỏng thì dùng căn hộ mặc định, không làm mất bản vẽ', () => {
+    const raw = JSON.stringify({ ver: CURRENT_VER, room: 'ngu', rooms: [{ id: 'Bad', type: 'ngu' }], layouts: sampleLayouts() });
+    const s = load(memoryKV({ [STATE_KEY]: raw }))!;
+    expect(s.rooms).toEqual(DEFAULT_ROOMS);
+    expect(Object.keys(s.layouts)).toHaveLength(4);
+  });
+
+  it('xuất cả căn: file ghi roomList và đủ phòng; xuất một phòng chỉ ghi phòng đó', () => {
+    const layouts = customLayouts();
+    const all = buildFile(layouts, { scope: 'all', room: 'ngu', now: NOW, rooms: custom });
+    expect(all.roomList).toEqual(custom);
+    expect(Object.keys(all.rooms).sort()).toEqual(custom.map((e) => e.id).sort());
+    const one = buildFile(layouts, { scope: 'room', room: 'ngu2', now: NOW, rooms: custom });
+    expect(Object.keys(one.rooms)).toEqual(['ngu2']);
+    expect(one.roomList).toEqual([custom[2]]);
+  });
+
+  it('xuất rồi nhập lại: giữ danh sách, thứ tự, tên và vị trí; bản vẽ giống hệt', () => {
+    const layouts = customLayouts();
+    const apt = { khach: { x: 0, y: 0 }, ngu2: { x: 900, y: 40 } };
+    const text = serializeFile(buildFile(layouts, { scope: 'all', room: 'ngu', now: NOW, rooms: custom, apt }));
+    const f = parseOk(text);
+    expect(f.rooms.map((r) => r.entry)).toEqual(custom);
+    expect(f.rooms.map((r) => r.id)).toEqual(custom.map((e) => e.id));
+    expect(f.apt).toEqual(apt);
+    expect(f.warnings).toEqual([]);
+    for (const r of f.rooms) expect(withoutUid(r.layout)).toEqual(withoutUid(layouts[r.id]!));
+  });
+
+  it('file cũ (khóa là mã loại, không có roomList) vẫn nhập được thành các phòng mặc định theo thứ tự loại', () => {
+    const f = parseOk(fileJson({ wc: roomJson(), ngu: roomJson() }));
+    expect(f.rooms.map((r) => r.id)).toEqual(['ngu', 'wc']);
+    expect(f.rooms.map((r) => r.entry)).toEqual([DEFAULT_ROOMS[0], DEFAULT_ROOMS[3]]);
+  });
+
+  it('khóa lạ không có trong roomList cũng không phải mã loại thì bỏ và báo', () => {
+    const f = parseOk(fileJson({ ngu: roomJson(), garage: roomJson() }));
+    expect(f.rooms.map((r) => r.id)).toEqual(['ngu']);
+    expect(warningCodes(f)).toContain('unknown-room');
+  });
+
+  it('tóm tắt xuất: đếm theo danh sách phòng đang có', () => {
+    const layouts = customLayouts();
+    const all = summarizeExport(layouts, 'all', 'ngu', custom);
+    expect(all.rooms).toBe(4);
+    expect(all.items).toBe(custom.reduce((n, e) => n + countItems(layouts[e.id]!), 0));
+    expect(summarizeExport(layouts, 'room', 'ngu2', custom).rooms).toBe(1);
+  });
+});
+
+describe('lịch sử hoàn tác khi thêm và xóa phòng', () => {
+  it('phòng mới có lịch sử riêng, bắt đầu từ bố cục lúc thêm', () => {
+    const base = sampleLayouts();
+    const h = new History();
+    h.reset(base);
+    const fresh = moved(base.ngu, 5);
+    h.add('ngu2', fresh);
+    expect(h.canUndo('ngu2')).toBe(false);
+    expect(h.commit('ngu2', moved(fresh, 9), false)).toBe(true);
+    expect(h.undo('ngu2')).toEqual(fresh);
+    // phòng cũ không bị ảnh hưởng
+    expect(h.canUndo('ngu')).toBe(false);
+  });
+
+  it('xóa phòng thì bỏ lịch sử: không ghi, không lùi được nữa', () => {
+    const base = sampleLayouts();
+    const h = new History();
+    h.reset(base);
+    expect(h.commit('ngu', moved(base.ngu, 1), false)).toBe(true);
+    h.remove('ngu');
+    expect(h.canUndo('ngu')).toBe(false);
+    expect(h.undo('ngu')).toBeNull();
+    expect(h.commit('ngu', moved(base.ngu, 2), false)).toBe(false);
+  });
+
+  it('lấy lại phòng đã xóa (add) thì lịch sử bắt đầu lại từ bố cục lấy lại', () => {
+    const base = sampleLayouts();
+    const h = new History();
+    h.reset(base);
+    h.remove('ngu');
+    const back = moved(base.ngu, 42);
+    h.add('ngu', back);
+    expect(h.canUndo('ngu')).toBe(false);
+    expect(h.commit('ngu', moved(back, 43), false)).toBe(true);
+    expect(h.undo('ngu')).toEqual(back);
+  });
+
+  it('thao tác liên tục không gộp qua việc xóa rồi thêm lại phòng', () => {
+    const c = clock();
+    const base = sampleLayouts();
+    const h = new History({ now: c.now });
+    h.reset(base);
+    h.commit('ngu', moved(base.ngu, 1), true);
+    h.remove('ngu');
+    h.add('ngu', base.ngu);
+    c.tick(10);
+    h.commit('ngu', moved(base.ngu, 2), true);
+    c.tick(10);
+    h.commit('ngu', moved(base.ngu, 3), true);
+    // hai bước liên tục sát nhau gộp thành một, nhưng bước đầu sau khi thêm lại vẫn là một bước riêng
+    expect(h.undo('ngu')).toEqual(base.ngu);
+  });
+});
+
+describe('lịch sử: bước mới hay gộp bước', () => {
+  it('lastWasNewStep: bước thường là bước mới; thao tác liên tục liền nhau thì gộp, không thêm bước', () => {
+    const c = clock();
+    const base = sampleLayouts();
+    const h = new History({ now: c.now });
+    h.reset(base);
+    expect(h.commit('ngu', moved(base.ngu, 1), true)).toBe(true);
+    expect(h.lastWasNewStep).toBe(true);
+    c.tick(50);
+    expect(h.commit('ngu', moved(base.ngu, 2), true)).toBe(true);
+    expect(h.lastWasNewStep).toBe(false);
+    c.tick(50);
+    expect(h.commit('ngu', moved(base.ngu, 3), true)).toBe(true);
+    expect(h.lastWasNewStep).toBe(false);
+    // chỉ có một bước để lùi
+    expect(h.undo('ngu')).toEqual(base.ngu);
+    expect(h.canUndo('ngu')).toBe(false);
+  });
+
+  it('thao tác không liên tục luôn là bước mới; sang phòng khác cũng là bước mới', () => {
+    const c = clock();
+    const base = sampleLayouts();
+    const h = new History({ now: c.now });
+    h.reset(base);
+    h.commit('ngu', moved(base.ngu, 1), true);
+    c.tick(10);
+    h.commit('ngu', moved(base.ngu, 2), false);
+    expect(h.lastWasNewStep).toBe(true);
+    c.tick(10);
+    h.commit('khach', moved(base.khach, 5), true);
+    expect(h.lastWasNewStep).toBe(true);
   });
 });

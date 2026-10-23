@@ -23,6 +23,12 @@
   justify-content: flex-end;
   margin-left: auto;
 }
+/* nút chỉnh bố cục căn hộ nằm cùng hàng với tab kiểu xem (chỉ hiện khi xem cả căn hộ), để hàng nút thao tác dài như khi xem một phòng */
+.aptacts {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
 .bar2 .tab:not([aria-pressed='true']):hover {
   background: var(--line);
 }
@@ -85,19 +91,27 @@ svg#plan {
   -webkit-user-select: none;
 }
 svg.pen-on,
-svg.pen-on .it {
+svg.pen-on .it,
+svg.pen-on .op {
   cursor: crosshair !important;
 }
-svg .it:focus-visible {
+svg .it:focus-visible,
+svg .op:focus-visible {
   outline: none;
 }
-svg .it:focus-visible rect:first-of-type {
+svg .it:focus-visible rect:first-of-type,
+svg .op:focus-visible rect:first-of-type {
   stroke-dasharray: 5 3;
 }
 
-/* Nút phóng to bản vẽ, cùng hàng với tên phòng */
-.zoombar {
+/* Nút phóng to bản vẽ và nút toàn màn hình, cùng hàng với tên phòng */
+.stageacts {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.zoombar {
   display: flex;
   gap: 4px;
   align-self: center;
@@ -157,6 +171,11 @@ svg .it:focus-visible rect:first-of-type {
 }
 
 @media (max-width: 1020px) {
+  /* khung vẽ rộng bằng khung, nhưng không cao hơn màn hình: bản vẽ tự co lọt vào (svg giữ tỉ lệ, canh giữa) */
+  svg#plan {
+    max-height: max(280px, 78vh);
+    max-height: max(280px, 78dvh);
+  }
   .body {
     grid-template-columns: 1fr;
     padding-bottom: 64px;
@@ -253,4 +272,242 @@ svg .it:focus-visible rect:first-of-type {
   color: var(--muted);
   font-size: 13px;
   max-width: 80ch;
+}
+
+/*
+ * Máy tính: khung thiết kế tràn hết bề ngang và vừa khít chiều cao màn hình (không phải cuộn trang để thấy cả bản vẽ).
+ * Bản vẽ 2D và khung 3D lấp đầy phần giữa, hai cột bên cuộn riêng. Điện thoại và máy tính bảng dọc giữ bố cục xếp dọc ở trên.
+ */
+@media (min-width: 1021px) {
+  body.app {
+    padding-block: 0;
+  }
+  .app .wrap {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-bottom: 12px;
+  }
+  .app .top {
+    padding-block: 8px;
+  }
+  /* chuột là chính: nút thấp hơn mức chạm 36px của điện thoại để dành chiều cao cho bản vẽ */
+  .app .btn,
+  .app .tab {
+    min-height: 32px;
+  }
+  .app .btn {
+    padding-block: 5px;
+  }
+  .app .remind {
+    flex: none;
+  }
+  .app .editor {
+    flex: 1 1 0;
+    min-height: 600px;
+    display: flex;
+    flex-direction: column;
+  }
+  .app .bar {
+    flex: none;
+    padding: 6px 12px;
+  }
+  /* cao cố định và căn giữa: nút "Cả căn hộ" có hay không (đang xem cả căn thì ẩn) cũng không làm khung vẽ đổi cỡ */
+  .app .stagehead {
+    padding: 6px 14px;
+    min-height: 44px;
+    align-items: center;
+  }
+  .app .body {
+    flex: 1 1 0;
+    min-height: 0;
+    grid-template-columns: clamp(230px, 17vw, 320px) minmax(0, 1fr) clamp(250px, 19vw, 340px);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .app .props {
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .app .stage {
+    min-height: 0;
+  }
+  /* khung vẽ chiếm hết chỗ còn lại; svg và khung 3D phủ kín khung đó, svg tự co cho lọt cả hai chiều */
+  .app .canvaswrap {
+    flex: 1 1 0;
+    min-height: 260px;
+    margin: 0 14px 6px;
+    padding: 0;
+  }
+  .app .canvaswrap > svg#plan,
+  .app .canvaswrap > .view3d {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .app .canvaswrap > .view3d {
+    aspect-ratio: auto;
+    min-height: 0;
+    max-height: none;
+  }
+  /* dòng trạng thái và chú thích chung một hàng khi đủ rộng, đỡ tốn chiều cao */
+  .app .statusrow {
+    flex: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    padding: 0 14px 6px;
+  }
+  /* chừa sẵn chỗ hai dòng: câu trạng thái dài ngắn khác nhau không làm khung vẽ co giãn (cần cho hiệu ứng zoom giữa mô hình và phòng) */
+  .app .status {
+    flex: 1 1 380px;
+    margin: 0;
+    padding: 5px 12px;
+    min-height: 54px;
+  }
+  .app .legend {
+    flex: 0 1 auto;
+    padding: 0;
+  }
+  .app .foot {
+    flex: none;
+    margin-top: 10px;
+    padding-top: 10px;
+    max-width: none;
+    font-size: 12.5px;
+  }
+}
+
+/*
+ * Toàn màn hình (lớp fs trên body, xem ui/fullscreen.ts): khung soạn thảo phủ kín cửa sổ ở mặt bằng, mặt đứng lẫn 3D.
+ * Thanh công cụ, thư viện bên trái và bảng chỉnh sửa bên phải vẫn có; đầu trang, nhắc sao lưu và chân trang được ẩn.
+ */
+body.fs {
+  overflow: hidden;
+}
+body.fs .top,
+body.fs .remind,
+body.fs .foot {
+  display: none;
+}
+body.fs .editor {
+  position: fixed;
+  inset: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  z-index: 90;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+}
+@media (max-width: 1020px) {
+  /* bố trí xếp dọc của điện thoại: khung soạn thảo cuộn bên trong */
+  body.fs .editor {
+    overflow-y: auto;
+  }
+}
+
+/*
+ * Mô hình cả căn hộ (data-view="overview" trên .editor): các phòng xếp cạnh nhau, đủ đồ và cửa, sửa được ngay; bấm đúp một phòng thì zoom vào phòng đó.
+ * Hai cột bên và thanh công cụ vẫn nằm yên chỗ (chỉ đổi nội dung) để khung vẽ giữ nguyên cỡ, nhờ đó hiệu ứng zoom liền mạch.
+ */
+.aptbase {
+  fill: var(--surface2);
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+.aptroom {
+  cursor: default;
+  outline: none;
+}
+/* khung tô sáng phòng: không nhận chuột, để đồ và cửa bên dưới vẫn bấm được */
+.apthit {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 3;
+  pointer-events: none;
+  transition:
+    fill 0.15s ease,
+    stroke 0.15s ease;
+}
+.aptroom:hover .apthit,
+.aptroom:focus-visible .apthit {
+  stroke: var(--accent);
+  stroke-opacity: 0.55;
+  stroke-width: 3;
+}
+svg#plan.aptedit .aptroom:hover .apthit {
+  fill: var(--accent);
+  fill-opacity: 0.1;
+  stroke-opacity: 1;
+  stroke-width: 4;
+}
+.aptname,
+.aptsize {
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-linejoin: round;
+}
+.aptname {
+  fill: var(--ink);
+  stroke-width: 7px;
+}
+.aptsize {
+  fill: var(--muted);
+  stroke-width: 5px;
+}
+/* đang bay vùng nhìn: không nhận chuột, chặn bấm nhầm giữa chừng */
+svg#plan.flying {
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .apthit {
+    transition: none;
+  }
+}
+
+/* Màn hình vừa (laptop 1280 px): lề ngang và khoảng cách nút gọn lại để hàng tab phòng và các nút thao tác vẫn vừa một dòng */
+@media (min-width: 1021px) and (max-width: 1340px) {
+  .app .bar,
+  .app .acts {
+    gap: 6px;
+  }
+  .app .btn {
+    padding-inline: 10px;
+  }
+  .app .tab {
+    padding-inline: 10px;
+  }
+}
+
+/* Chỉnh bố cục căn hộ: phòng kéo được, phòng đang chọn có tay nắm đổi cỡ */
+svg#plan.aptedit .aptroom {
+  cursor: grab;
+}
+/* đang chỉnh bố cục: kéo là dời cả phòng, đồ và cửa không nhận chuột */
+svg#plan.aptedit .it,
+svg#plan.aptedit .op {
+  pointer-events: none;
+}
+svg#plan.aptedit .aptroom:active {
+  cursor: grabbing;
+}
+.aptroom[data-selected='true'] .apthit {
+  fill: transparent;
+  stroke: var(--accent);
+  stroke-opacity: 1;
+  stroke-width: 4;
+}
+.aptroom[data-clash='true'] .apthit {
+  stroke: var(--warn);
+  stroke-width: 4;
+  fill: var(--warn);
+  fill-opacity: 0.08;
+}
+.apthandle {
+  fill: var(--accent);
+  stroke: var(--surface);
+  stroke-width: 2px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }

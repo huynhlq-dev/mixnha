@@ -27,6 +27,74 @@
   color: var(--muted);
   margin-bottom: 6px;
 }
+
+/* Mỗi nhóm là một hàng tiêu đề; chỉ nhóm đang chọn mới hiện danh sách món */
+.acc {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.acc .cat {
+  margin-top: 0;
+  border-bottom: 1px solid var(--line);
+}
+.cathead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.cathead:hover {
+  color: var(--ink);
+  background: var(--surface2);
+}
+.cathead[aria-expanded='true'] {
+  color: var(--ink);
+}
+.cathead .ct {
+  flex: 1;
+}
+.cathead .cn {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--muted);
+}
+.cathead .chev {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-left: 4px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+.cathead[aria-expanded='true'] .chev {
+  transform: rotate(45deg);
+}
+.catitems {
+  padding-bottom: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cathead .chev {
+    transition: none;
+  }
+}
 .item {
   display: flex;
   align-items: center;
@@ -100,4 +168,39 @@
     background: var(--surface);
     border-bottom: 1px solid var(--line);
   }
+}
+
+/* Xem cả căn hộ: cột trái là danh sách phòng */
+.aptlist h3 {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 4px 0 6px;
+}
+.aptitem {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+}
+.aptitem:hover {
+  background: var(--surface2);
+  border-color: var(--accent);
+}
+.aptitem .nm {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+.aptitem .sz {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
 }

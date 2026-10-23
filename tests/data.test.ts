@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES } from '../src/data/categories';
 import { ALL_ITEMS } from '../src/data/items';
-import { ROOMS, ROOM_IDS } from '../src/data/rooms';
+import { ROOMS, ROOM_TYPE_IDS } from '../src/data/rooms';
 import { SHAPE_IDS } from '../src/data/shapes';
-import type { ItemDef } from '../src/data/schema';
-import { validateData } from '../src/core/validate';
+import { OPENING_PRESETS } from '../src/data/openings';
+import type { ItemDef, OpeningPreset } from '../src/data/schema';
+import { validateData, validateOpeningPresets } from '../src/core/validate';
 
-const rooms = ROOM_IDS.map((id) => ROOMS[id]);
+const rooms = ROOM_TYPE_IDS.map((id) => ROOMS[id]);
 const base: ItemDef = { id: 'test1', name: 'Thử', cat: 'sleeping', place: 'floor', w: 100, d: 50, h: 40, color: '#112233', status: 'live' };
 
 function issues(items: ItemDef[]) {
@@ -70,5 +71,52 @@ describe('validateData bắt lỗi khai báo', () => {
     const room = { ...ROOMS.ngu, sample: { floor: [['dr1', 100, 100, 0], ['ghost', 50, 50, 0]], walls: {} } } as typeof ROOMS.ngu;
     const out = validateData([draft], CATEGORIES, [room], SHAPE_IDS);
     expect(out.filter((i) => i.field === 'sample').length).toBe(2);
+  });
+});
+
+describe('các loại cửa đi, cửa sổ trong thư viện', () => {
+  const itemIds = ALL_ITEMS.map((i) => i.id);
+  const door: OpeningPreset = { id: 'doorX', kind: 'door', name: 'Cửa thử', w: 80, color: '#C9A27E' };
+  const win: OpeningPreset = { id: 'winX', kind: 'win', name: 'Cửa sổ thử', w: 100, sill: 90, h: 120, color: '#BFD7E3' };
+  const check = (list: OpeningPreset[]) => validateOpeningPresets(list, itemIds);
+  const errorsOf = (list: OpeningPreset[]) => check(list).map((i) => `${i.where}:${i.field}`);
+
+  it('dữ liệu thật không có lỗi, có cả cửa đi và cửa sổ', () => {
+    expect(validateOpeningPresets(OPENING_PRESETS, itemIds)).toEqual([]);
+    expect(OPENING_PRESETS.some((p) => p.kind === 'door')).toBe(true);
+    expect(OPENING_PRESETS.some((p) => p.kind === 'win')).toBe(true);
+  });
+
+  it('mã cửa không trùng mã món nào (cả hai đi chung đường kéo thả)', () => {
+    const ids = new Set(itemIds);
+    for (const p of OPENING_PRESETS) expect(ids.has(p.id)).toBe(false);
+  });
+
+  it('bắt lỗi: trùng mã giữa các cửa, trùng mã món, mã sai kiểu', () => {
+    expect(errorsOf([door, door])).toEqual(['doorX:id']);
+    expect(errorsOf([{ ...door, id: 'bed2' }])).toEqual(['bed2:id']);
+    expect(errorsOf([{ ...door, id: 'Cửa 1' }])).toEqual(['Cửa 1:id']);
+  });
+
+  it('bắt lỗi: thiếu tên, màu sai, loại sai', () => {
+    expect(errorsOf([{ ...door, name: ' ' }])).toEqual(['doorX:name']);
+    expect(errorsOf([{ ...door, color: 'red' }])).toEqual(['doorX:color']);
+    expect(errorsOf([{ ...door, kind: 'gate' as never }])).toEqual(['doorX:kind']);
+  });
+
+  it('bắt lỗi chiều rộng: dưới 30 cm hoặc quá lớn so với phòng rộng nhất', () => {
+    expect(errorsOf([{ ...door, w: 20 }])).toEqual(['doorX:w']);
+    expect(errorsOf([{ ...door, w: 1600 }])).toEqual(['doorX:w']);
+    expect(errorsOf([{ ...door, w: Number.NaN }])).toEqual(['doorX:w']);
+    expect(check([door, win])).toEqual([]);
+  });
+
+  it('cửa đi không được có bậu, chiều cao riêng; cửa sổ phải vừa trần thấp nhất (220 cm)', () => {
+    expect(errorsOf([{ ...door, sill: 10 }])).toEqual(['doorX:sill']);
+    expect(errorsOf([{ ...win, sill: 150, h: 100 }])).toEqual(['winX:h']);
+    expect(errorsOf([{ ...win, sill: -5 }])).toEqual(['winX:sill']);
+    expect(errorsOf([{ ...win, h: 5 }])).toEqual(['winX:h']);
+    // không ghi bậu, cao thì dùng mặc định 90 + 120 = 210: hợp lệ
+    expect(check([{ id: 'winY', kind: 'win', name: 'Mặc định', w: 100, color: '#BFD7E3' }])).toEqual([]);
   });
 });

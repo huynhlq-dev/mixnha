@@ -3,21 +3,31 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="light" />
     <title>%VITE_APP_NAME%</title>
     <meta name="description" content="Xếp đồ nội thất vào căn hộ trên bản vẽ đúng tỉ lệ: mặt bằng, mặt đứng và 3D xoay 360°. Chạy hoàn toàn trong trình duyệt, không cần tài khoản." />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      // đặt giao diện đã chọn trước khi vẽ trang để không nháy sáng; cùng khóa với src/ui/theme.ts
+      try {
+        document.documentElement.dataset.theme = localStorage.getItem('xepnha2d:theme') === 'dark' ? 'dark' : 'light';
+      } catch (e) {}
+    </script>
   </head>
-  <body>
+  <body class="app">
     <div class="wrap">
       <header class="top">
         <h1 class="brand">
           <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="2" y="2" width="22" height="22" rx="3" fill="none" stroke="currentColor" stroke-width="2" /><path d="M2 14h10v10M16 2v8h8" fill="none" stroke="currentColor" stroke-width="2" /><rect x="5" y="17" width="5" height="4" style="fill: var(--accent)" /></svg>
           <span id="appName">%VITE_APP_NAME%</span>
         </h1>
-        <div class="files" role="group" aria-label="Lưu và mở file">
-          <button class="btn" id="btnExport" type="button" title="Xuất bản thiết kế ra file .json để lưu hoặc gửi người khác">Xuất file</button>
-          <button class="btn" id="btnImport" type="button" title="Nhập file .json do người khác gửi hoặc do bạn đã lưu">Nhập file</button>
+        <div class="topbtns">
+          <button class="btn" id="btnNew" type="button" title="Bắt đầu một dự án mới: chọn các phòng của căn hộ">Dự án mới</button>
+          <div class="files" role="group" aria-label="Lưu và mở file">
+            <button class="btn" id="btnExport" type="button" title="Xuất bản thiết kế ra file .json để lưu hoặc gửi người khác">Xuất file</button>
+            <button class="btn" id="btnImport" type="button" title="Nhập file .json do người khác gửi hoặc do bạn đã lưu">Nhập file</button>
+          </div>
+          <button class="btn" id="btnTheme" type="button" aria-pressed="false" title="Đổi giao diện sáng, tối"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.6 9.8A5.8 5.8 0 0 1 6.2 2.4a5.8 5.8 0 1 0 7.4 7.4Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg>Chế độ tối</button>
         </div>
       </header>
 
@@ -35,6 +45,7 @@
             <button class="btn" id="btnRedo" type="button" disabled title="Làm lại (Ctrl+Shift+Z)"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L13.5 6.5L10 10M13 6.5H6a4 4 0 0 0 0 8h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>Làm lại</button>
             <button class="btn" id="btnSnap" aria-pressed="true" type="button" title="Món nhảy theo lưới 5 cm khi kéo">Bám lưới</button>
             <button class="btn" id="btnDim" aria-pressed="true" type="button">Hiện kích thước</button>
+            <button class="btn switch" id="btnDetail" type="button" role="switch" aria-checked="false" title="Khi chọn một món, hiện kích thước rộng, sâu, cao ngay trên từng cạnh của món (nhãn hơi mờ). Không dùng được ở 3D."><span class="track" aria-hidden="true"><span class="thumb"></span></span>Kích thước chi tiết</button>
             <button class="btn" id="btnReset" type="button">Bố trí mẫu</button>
             <button class="btn" id="btnClear" type="button">Xóa hết</button>
           </div>
@@ -44,6 +55,10 @@
             <button class="tab" type="button" data-mode="plan" aria-pressed="true">Mặt bằng<span class="lg"> (nhìn từ trên)</span></button>
             <button class="tab" type="button" data-mode="elev" aria-pressed="false">Mặt đứng<span class="lg"> (nhìn vào tường)</span></button>
             <button class="tab" type="button" data-mode="3d" aria-pressed="false">3D<span class="lg"> (xoay 360°)</span></button>
+          </div>
+          <div class="aptacts">
+            <button class="btn switch" id="btnAptEdit" type="button" role="switch" aria-checked="false" hidden title="Bật để kéo phòng sang chỗ khác và kéo tay nắm đổi kích thước phòng ngay trên mô hình căn hộ. Tắt thì kéo là dời đồ trong phòng."><span class="track" aria-hidden="true"><span class="thumb"></span></span>Chỉnh bố cục</button>
+            <button class="btn" id="btnAptAuto" type="button" hidden title="Xếp lại các phòng theo lưới tự động (kích thước phòng giữ nguyên). Có thể Hoàn tác.">Xếp lại tự động</button>
           </div>
           <div class="wallsrow" id="wallsRow" hidden>
             <div class="tabs" id="walls" role="group" aria-label="Chọn tường"></div>
@@ -58,32 +73,36 @@
               <input class="search" id="q" type="search" placeholder="Tìm: giường, sofa, tủ..." aria-label="Tìm đồ nội thất" autocomplete="off" />
               <div id="library"></div>
               <p class="hint" id="libHint"></p>
+              <div class="aptlist" id="aptList" hidden></div>
             </div>
           </aside>
 
           <div class="stage">
             <div class="stagehead">
+              <button class="btn" id="btnApt" type="button" title="Về mô hình cả căn hộ (zoom ra), rồi chọn phòng khác"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>Cả căn hộ</button>
               <strong id="roomName"></strong><span class="mono" id="roomSize"></span><span class="mono" id="roomArea"></span>
-              <div class="zoombar" id="zoombar" role="group" aria-label="Phóng to bản vẽ">
-                <button class="btn" id="zOut" type="button" aria-label="Thu nhỏ" title="Thu nhỏ">−</button>
-                <button class="btn" id="zFit" type="button" title="Xem toàn bộ bản vẽ">Vừa khung</button>
-                <button class="btn" id="zIn" type="button" aria-label="Phóng to" title="Phóng to. Cũng có thể giữ Ctrl và cuộn chuột, hoặc chụm hai ngón.">+</button>
+              <div class="stageacts">
+                <div class="zoombar" id="zoombar" role="group" aria-label="Phóng to bản vẽ">
+                  <button class="btn" id="zOut" type="button" aria-label="Thu nhỏ" title="Thu nhỏ">−</button>
+                  <button class="btn" id="zFit" type="button" title="Xem toàn bộ bản vẽ">Vừa khung</button>
+                  <button class="btn" id="zIn" type="button" aria-label="Phóng to" title="Phóng to. Cũng có thể giữ Ctrl và cuộn chuột, hoặc chụm hai ngón.">+</button>
+                </div>
+                <button class="btn" id="btnFull" type="button" aria-pressed="false" title="Phủ kín màn hình, vẫn có thư viện bên trái và bảng chỉnh sửa bên phải. Thoát bằng nút này hoặc phím Esc."><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg><span id="fullLabel">Toàn màn hình</span></button>
               </div>
             </div>
             <div class="canvaswrap">
               <svg id="plan" role="img" aria-label="Mặt bằng phòng 2D"></svg>
               <div id="view3d" class="view3d" hidden tabindex="0" role="application" aria-label="Xem 3D căn phòng. Kéo để xoay 360 độ, cuộn để phóng to, phím mũi tên để xoay">
                 <div class="v3bar">
-                  <button class="btn" id="btnAuto" type="button" aria-pressed="true">Tự xoay 360°</button>
                   <button class="btn" id="btnIso" type="button">Góc chéo</button>
                   <button class="btn" id="btnTop" type="button">Nhìn từ trên</button>
                   <button class="btn" id="btnZi" type="button" aria-label="Phóng to">+</button>
                   <button class="btn" id="btnZo" type="button" aria-label="Thu nhỏ">−</button>
-                  <button class="btn" id="btnFull" type="button" aria-pressed="false">Toàn màn hình</button>
                 </div>
                 <div class="v3hint" id="v3hint">Kéo nền để xoay · kéo món để di chuyển · cuộn hoặc chụm hai ngón để phóng to</div>
               </div>
             </div>
+            <div class="statusrow">
             <div class="status" id="status" role="status"></div>
             <div class="legend" id="legend">
               <span><i class="dot" style="background: var(--accent)"></i>Đang chọn</span>
@@ -91,70 +110,121 @@
               <span><i class="dot" style="background: var(--ok)"></i>Lối đi hẹp nhất từ 60 cm</span>
               <span><i class="dot" style="background: transparent; border: 1px dashed var(--muted)"></i>Vùng mở cửa</span>
             </div>
+            </div>
           </div>
 
           <aside class="pane props" aria-label="Thuộc tính">
-            <h3>Bút màu</h3>
-            <div class="pen">
-              <input type="color" id="penColor" value="#e3b7a0" aria-label="Chọn màu cho bút" />
-              <input class="num" id="penHex" type="text" value="#E3B7A0" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Mã màu hex" />
-            </div>
-            <div class="row" style="margin-top: 8px">
-              <button class="btn" id="penPick" type="button" aria-pressed="false">Lấy màu</button>
-              <button class="btn" id="penPaint" type="button" aria-pressed="false">Chấm màu</button>
-            </div>
-            <div class="field"><span>Màu gần đây</span><div class="swatches" id="penRecent"></div></div>
-            <p class="hint" id="penHint"></p>
-            <hr />
-            <h3>Phòng</h3>
-            <div class="field">
-              <span>Kích thước phòng (cm)</span>
-              <div class="sizes3">
-                <label><span>Ngang</span><input class="num" id="rW" type="number" min="150" max="1500" step="10" inputmode="numeric" /></label>
-                <label><span>Dọc</span><input class="num" id="rH" type="number" min="150" max="1500" step="10" inputmode="numeric" /></label>
-                <label><span>Trần cao</span><input class="num" id="rC" type="number" min="220" max="450" step="5" inputmode="numeric" /></label>
+            <div id="propsRoom">
+              <h3 id="selHead">Món đang chọn</h3>
+              <div id="selEmpty" class="empty"></div>
+              <div id="opBox" hidden>
+                <div class="field" style="margin-top: 0">
+                  <span>Tường</span>
+                  <div class="tabs" id="opWalls" role="group" aria-label="Đặt lên tường nào"></div>
+                </div>
+                <div class="field">
+                  <span id="lblOpPos">Cách góc trái (cm)</span>
+                  <input class="num" id="opPos" type="number" min="5" step="5" inputmode="numeric" aria-label="Vị trí dọc tường" />
+                </div>
+                <div class="field">
+                  <span>Rộng (cm)</span>
+                  <input class="num" id="opW" type="number" min="30" step="5" inputmode="numeric" aria-label="Rộng" />
+                </div>
+                <div class="field" id="opDoor" hidden>
+                  <span>Hướng mở cánh</span>
+                  <div class="row">
+                    <button class="btn" id="opFlip" type="button" title="Đổi bản lề sang đầu bên kia của cửa">Đổi bên bản lề</button>
+                    <button class="btn" id="opSwing" type="button" aria-pressed="false" title="Mở cánh ra ngoài phòng thay vì vào trong">Mở ra ngoài</button>
+                  </div>
+                  <p class="hint" style="margin: 2px 0 0">Phím R xoay hướng mở cánh một nấc theo chiều kim đồng hồ, Shift+R ngược lại.</p>
+                </div>
+                <div class="field">
+                  <span>Thao tác</span>
+                  <div class="row">
+                    <button class="btn danger" id="opDel" type="button" title="Xóa cửa này khỏi tường (Delete). Có thể Hoàn tác.">Xóa</button>
+                  </div>
+                </div>
+                <p class="hint">Kéo cửa trên bản vẽ để dời chỗ. Trên mặt bằng, kéo cửa sang tường khác thì cửa chuyển tường. Phím tắt: mũi tên dịch 5 cm (giữ Shift: 25 cm), Delete xóa. Thêm cửa mới từ nhóm Cửa đi, Cửa sổ trong thư viện.</p>
               </div>
-              <p class="hint" style="margin: 2px 0 0">Ngang, dọc từ 150 đến 1500 cm. Trần từ 220 đến 450 cm.</p>
-            </div>
-            <div class="field"><span>Màu sàn</span><div class="swatches" id="floorSw"></div></div>
-            <div class="field"><span>Màu tường</span><div class="swatches" id="wallSw"></div></div>
-            <hr />
-            <h3>Món đang chọn</h3>
-            <div id="selEmpty" class="empty"></div>
-            <div id="selBox" hidden>
-              <div class="selname"><span id="selName"></span><span class="badge" id="selCustom" hidden title="Món không có trong thư viện, giữ theo kích thước ghi trong file">tùy chỉnh</span></div>
-              <p class="selnote" id="selNote" hidden></p>
+              <div id="selBox" hidden>
+                <div class="selname"><span id="selName"></span><span class="badge" id="selCustom" hidden title="Món không có trong thư viện, giữ theo kích thước ghi trong file">tùy chỉnh</span></div>
+                <p class="selnote" id="selNote" hidden></p>
+                <div class="field">
+                  <span id="lblSize">Rộng × sâu (cm)</span>
+                  <div class="sizes">
+                    <input class="num" id="selW" type="number" min="10" max="600" step="5" inputmode="numeric" aria-label="Rộng" />
+                    <input class="num" id="selD" type="number" min="10" max="600" step="5" inputmode="numeric" aria-label="Sâu hoặc cao" />
+                  </div>
+                </div>
+                <div class="field" id="fieldY" hidden>
+                  <span>Cao độ mép dưới so với sàn (cm)</span>
+                  <input class="num" id="selY" type="number" min="0" max="400" step="5" inputmode="numeric" aria-label="Cao độ so với sàn" />
+                </div>
+                <div class="field"><span>Màu</span><div class="swatches" id="itemSw"></div></div>
+                <div class="field" id="fieldRot">
+                  <span>Xoay</span>
+                  <div class="rotrow">
+                    <button class="btn" id="btnRotL" type="button" title="Xoay trái 90° (Shift+R)">−90°</button>
+                    <button class="btn" id="btnRotR" type="button" title="Xoay phải 90° (R)">+90°</button>
+                    <button class="knob" id="rotKnob" type="button" aria-label="Xoay tự do: nhấn giữ rồi kéo quanh vòng tròn" title="Xoay tự do: nhấn giữ rồi kéo. Giữ Shift để nhảy 15°"><span class="knob-dial" id="knobDial"></span></button>
+                    <input class="num rotnum" id="selRot" type="number" min="0" max="359" step="1" inputmode="decimal" aria-label="Góc xoay (độ)" />
+                  </div>
+                  <p class="hint" style="margin: 0">Nhấn giữ vòng tròn rồi kéo để xoay tự do, hoặc kéo chấm xanh trên món. Giữ Shift để nhảy 15°.</p>
+                </div>
+                <div class="field">
+                  <span>Thao tác</span>
+                  <div class="row">
+                    <button class="btn" id="btnLock" type="button" aria-pressed="false" title="Khóa món đã chốt chỗ để không kéo, xoay hay xóa nhầm. Vẫn đổi màu được.">Khóa món</button>
+                    <button class="btn" id="btnDup" type="button">Nhân đôi</button>
+                    <button class="btn danger" id="btnDel" type="button">Xóa</button>
+                  </div>
+                  <p class="hint" id="lockHint" style="margin: 2px 0 0" hidden>Món đã khóa nên không kéo, xoay, đổi kích thước hay xóa được. Vẫn đổi màu. Bấm Khóa món lần nữa để mở khóa.</p>
+                  <p class="hint" style="margin: 2px 0 0">Phím tắt: mũi tên di chuyển 5 cm (giữ Shift: 25 cm), R xoay 90°, Delete xóa, Ctrl+Z hoàn tác.</p>
+                </div>
+              </div>
+              <hr />
+              <div class="penbox" id="penBox" data-on="false">
+                <div class="peninner">
+                  <h3>Bút màu</h3>
+                  <div class="pen">
+                    <input type="color" id="penColor" value="#e3b7a0" aria-label="Chọn màu cho bút" />
+                    <input class="num" id="penHex" type="text" value="#E3B7A0" maxlength="7" spellcheck="false" autocomplete="off" aria-label="Mã màu hex" />
+                  </div>
+                  <div class="row" style="margin-top: 8px">
+                    <button class="btn" id="penPick" type="button" aria-pressed="false">Lấy màu</button>
+                    <button class="btn" id="penPaint" type="button" aria-pressed="false">Chấm màu</button>
+                  </div>
+                  <div class="field"><span>Màu gần đây</span><div class="swatches" id="penRecent"></div></div>
+                  <p class="hint" id="penHint"></p>
+                  <hr />
+                </div>
+              </div>
+              <div id="roomSec">
+              <h3 id="roomHead">Phòng</h3>
               <div class="field">
-                <span id="lblSize">Rộng × sâu (cm)</span>
-                <div class="sizes">
-                  <input class="num" id="selW" type="number" min="10" max="600" step="5" inputmode="numeric" aria-label="Rộng" />
-                  <input class="num" id="selD" type="number" min="10" max="600" step="5" inputmode="numeric" aria-label="Sâu hoặc cao" />
+                <span>Kích thước phòng (cm)</span>
+                <div class="sizes3">
+                  <label><span>Ngang</span><input class="num" id="rW" type="number" min="150" max="1500" step="10" inputmode="numeric" /></label>
+                  <label><span>Dọc</span><input class="num" id="rH" type="number" min="150" max="1500" step="10" inputmode="numeric" /></label>
+                  <label><span>Trần cao</span><input class="num" id="rC" type="number" min="220" max="450" step="5" inputmode="numeric" /></label>
                 </div>
+                <p class="hint" style="margin: 2px 0 0">Ngang, dọc từ 150 đến 1500 cm. Trần từ 220 đến 450 cm.</p>
               </div>
-              <div class="field" id="fieldY" hidden>
-                <span>Cao độ mép dưới so với sàn (cm)</span>
-                <input class="num" id="selY" type="number" min="0" max="400" step="5" inputmode="numeric" aria-label="Cao độ so với sàn" />
+              <div class="field"><span>Màu sàn</span><div class="swatches" id="floorSw"></div></div>
+              <div class="field"><span>Màu tường</span><div class="swatches" id="wallSw"></div></div>
               </div>
-              <div class="field"><span>Màu</span><div class="swatches" id="itemSw"></div></div>
-              <div class="field" id="fieldRot">
-                <span>Xoay</span>
-                <div class="rotrow">
-                  <button class="btn" id="btnRotL" type="button" title="Xoay trái 90° (Shift+R)">−90°</button>
-                  <button class="btn" id="btnRotR" type="button" title="Xoay phải 90° (R)">+90°</button>
-                  <button class="knob" id="rotKnob" type="button" aria-label="Xoay tự do: nhấn giữ rồi kéo quanh vòng tròn" title="Xoay tự do: nhấn giữ rồi kéo. Giữ Shift để nhảy 15°"><span class="knob-dial" id="knobDial"></span></button>
-                  <input class="num rotnum" id="selRot" type="number" min="0" max="359" step="1" inputmode="decimal" aria-label="Góc xoay (độ)" />
+            </div>
+            <div class="aptinfo" id="aptInfo" hidden>
+              <div id="aptSummary"></div>
+              <div id="aptSel" hidden>
+                <hr />
+                <h3 id="aptSelName"></h3>
+                <label class="field"><span>Tên phòng</span><input class="num" id="aptName" type="text" maxlength="40" autocomplete="off" spellcheck="false" aria-label="Tên phòng" style="font-family: var(--font)" /></label>
+                <p class="hint">Đổi kích thước, màu sàn, màu tường của phòng này ở mục Phòng phía trên. Bật "Chỉnh bố cục" để kéo phòng sang chỗ khác và kéo tay nắm đổi cỡ (phím mũi tên dời 10 cm, giữ Shift thì 50 cm, Delete xóa phòng).</p>
+                <div class="row" style="margin-top: 6px">
+                  <button class="btn pri" id="aptEnter" type="button">Thiết kế phòng này</button>
+                  <button class="btn danger" id="aptDel" type="button" title="Xóa phòng này khỏi căn hộ, kèm toàn bộ bản vẽ của phòng (Delete). Có thể Hoàn tác.">Xóa phòng</button>
                 </div>
-                <p class="hint" style="margin: 0">Nhấn giữ vòng tròn rồi kéo để xoay tự do, hoặc kéo chấm xanh trên món. Giữ Shift để nhảy 15°.</p>
-              </div>
-              <div class="field">
-                <span>Thao tác</span>
-                <div class="row">
-                  <button class="btn" id="btnLock" type="button" aria-pressed="false" title="Khóa món đã chốt chỗ để không kéo, xoay hay xóa nhầm. Vẫn đổi màu được.">Khóa món</button>
-                  <button class="btn" id="btnDup" type="button">Nhân đôi</button>
-                  <button class="btn danger" id="btnDel" type="button">Xóa</button>
-                </div>
-                <p class="hint" id="lockHint" style="margin: 2px 0 0" hidden>Món đã khóa nên không kéo, xoay, đổi kích thước hay xóa được. Vẫn đổi màu. Bấm Khóa món lần nữa để mở khóa.</p>
-                <p class="hint" style="margin: 2px 0 0">Phím tắt: mũi tên di chuyển 5 cm (giữ Shift: 25 cm), R xoay 90°, Delete xóa, Ctrl+Z hoàn tác.</p>
               </div>
             </div>
           </aside>
@@ -171,6 +241,29 @@
 
       <p class="foot">Mọi thứ chạy ngay trong trình duyệt của bạn: bản vẽ không được gửi đi đâu. Dữ liệu tự lưu chỉ nằm trong trình duyệt này, nên hãy bấm Xuất file để giữ một bản sao lưu.</p>
     </div>
+
+    <dialog class="dlg" id="dlgNew" aria-labelledby="npTitle">
+      <div class="dlg-in">
+        <div class="dlg-h"><h2 id="npTitle">Dự án mới</h2><span class="meta">Chọn các phòng của căn hộ</span></div>
+        <div class="dlg-b">
+          <label class="fld"><b>Tên dự án (không bắt buộc)</b><input class="inp" id="npName" maxlength="80" autocomplete="off" placeholder="Căn hộ của tôi" /></label>
+          <div class="fld">
+            <b>Các phòng</b>
+            <ul class="nplist" id="npList"></ul>
+          </div>
+          <label class="opt"><input type="checkbox" id="npSample" /><span>Kèm đồ mẫu (mỗi phòng có sẵn một bố trí đồ để sửa tiếp)</span></label>
+          <div class="meta" id="npSummary"></div>
+          <div class="errline" id="npWarn" hidden>
+            Dự án đang mở (kể cả bản tự lưu trong trình duyệt) sẽ bị thay thế. Nếu muốn giữ, hãy xuất file trước.
+            <button class="link" id="npExport" type="button">Xuất file trước</button>
+          </div>
+        </div>
+        <div class="dlg-f">
+          <button class="btn pri" id="npCreate" type="button">Tạo dự án</button>
+          <button class="btn" id="npCancel" type="button">Hủy</button>
+        </div>
+      </div>
+    </dialog>
 
     <dialog class="dlg" id="dlgExport" aria-labelledby="exTitle">
       <div class="dlg-in">

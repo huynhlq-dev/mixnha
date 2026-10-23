@@ -12,6 +12,14 @@ export function rememberColor(recent: readonly string[], hex: string): string[] 
   return [hex, ...recent.filter((c) => c !== hex)].slice(0, MAX_RECENT);
 }
 
+/**
+ * Khối Bút màu chỉ hiện khi có món đang chọn. Đang dùng bút (lấy màu, chấm màu) thì vẫn hiện dù bỏ chọn món,
+ * nếu không bút còn bật mà nút của nó đã biến mất.
+ */
+export function penShown(hasSel: boolean, tool: PenTool): boolean {
+  return hasSel || tool !== null;
+}
+
 export function penHint(tool: PenTool): string {
   if (tool === 'pick') return 'Bấm vào một món, sàn hoặc tường để hút màu của nó. Xong bút tự chuyển sang chấm màu.';
   if (tool === 'paint') return 'Bấm vào món, sàn hoặc tường để chấm màu này. Bấm Esc hoặc bấm lại nút để thoát.';

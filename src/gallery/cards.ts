@@ -13,7 +13,6 @@ const PAD = 4;
 /** Kích thước tối đa khi vẽ (cm). Dữ liệu hỏng (rộng 99999) không làm vỡ trang. */
 const DRAW_MAX = 1000;
 const FALLBACK_COLOR = '#cccccc';
-const INK = 'rgba(21,33,30,.6)';
 
 export interface CardContext {
   scale: number;
@@ -40,7 +39,7 @@ export function figureSvg(def: ItemDef, scale: number): string {
   const label = `${def.name}, ${fm(def.w)} × ${fm(def.place === 'wall' ? def.h : def.d)} cm`;
   return (
     `<svg class="gsvg" viewBox="0 0 ${n2(vw)} ${n2(vh)}" width="${n2(vw * scale)}" height="${n2(vh * scale)}" role="img" aria-label="${escapeHtml(label)}">` +
-    `<rect x="${PAD}" y="${PAD}" width="${n2(w)}" height="${n2(h)}" rx="3" style="fill:${color};stroke:${INK};stroke-width:1.2"${dash}/>` +
+    `<rect x="${PAD}" y="${PAD}" width="${n2(w)}" height="${n2(h)}" rx="3" style="fill:${color};stroke:var(--ink);stroke-opacity:.6;stroke-width:1.2"${dash}/>` +
     `</svg>`
   );
 }

@@ -13,6 +13,12 @@ export const LIMITS = {
   undoSteps: 100,
   /** Lưới bám (cm). */
   grid: 5,
+  /** Cửa đi, cửa sổ: rộng tối thiểu và khoảng chừa từ mép cửa tới góc tường (cm). */
+  opening: { minW: 30, margin: 5 },
+  /** Số phòng tối đa trong căn hộ. */
+  maxRooms: 12,
+  /** Số cửa đi và số cửa sổ tối đa mỗi phòng. File nhiều hơn thì bỏ phần dư. */
+  maxOpeningsPerKind: 12,
 } as const;
 
 export type RoomDimKey = 'W' | 'H' | 'ceil';

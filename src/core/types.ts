@@ -1,4 +1,4 @@
-import type { WallKey } from '../data/schema';
+import type { DoorDef, WallKey, WindowDef } from '../data/schema';
 import type { RoomId } from '../data/rooms';
 
 /** Món đặt sàn đã đặt vào bản vẽ. x, y là tâm (cm), rot là góc xoay (độ). */
@@ -38,6 +38,25 @@ export interface WallItem {
 
 export type AnyItem = FloorItem | WallItem;
 
+/** Cửa đi đã đặt trên tường của một phòng. pos là khoảng cách từ góc tới mép cửa (cm), cùng quy ước với DoorDef. */
+export interface DoorItem extends DoorDef {
+  /** Mã đếm tạm trong lần mở trang, không đi vào file xuất. */
+  uid: number;
+}
+
+export interface WindowItem extends WindowDef {
+  uid: number;
+}
+
+/** Cửa đi hay cửa sổ. Cùng cách gọi với Opening (chỗ mở trên mặt đứng). */
+export type OpeningKind = 'door' | 'win';
+
+/** Cửa đi hoặc cửa sổ đang chọn. Tách khỏi Selection vì cửa không phải món: không có tên, màu, khóa hay thư viện. */
+export interface OpeningSel {
+  kind: OpeningKind;
+  uid: number;
+}
+
 /** Danh sách món nào: "floor" là đồ sàn, còn lại là đồ gắn tường theo từng tường. */
 export type Scope = 'floor' | WallKey;
 
@@ -49,9 +68,17 @@ export interface Layout {
   wall: string;
   items: FloorItem[];
   walls: Record<WallKey, WallItem[]>;
+  doors: DoorItem[];
+  windows: WindowItem[];
 }
 
 export type Layouts = Record<RoomId, Layout>;
+
+/**
+ * Vị trí của từng phòng trong mô hình căn hộ: góc trên trái (cm) theo hệ tọa độ chung của căn. Phòng chưa có vị trí thì
+ * được tự xếp theo lưới (views/apartment.ts). Không phải một phần của bản vẽ phòng nên không đi cùng Hoàn tác của phòng.
+ */
+export type AptPlan = Partial<Record<RoomId, { x: number; y: number }>>;
 
 /** Món đang chọn. */
 export interface Selection {

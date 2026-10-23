@@ -1,13 +1,17 @@
 /**
- * 3D toàn màn hình: thử toàn màn hình thật của trình duyệt; không được (iPhone, khung nhúng) thì phủ kín cửa sổ bằng CSS.
- * Thoát bằng nút, phím Esc hoặc phím thoát của trình duyệt.
+ * Toàn màn hình cho cả trình thiết kế, ở mặt bằng, mặt đứng và 3D: khung soạn thảo phủ kín màn hình, vẫn có thanh công cụ,
+ * thư viện bên trái và bảng chỉnh sửa bên phải; đầu trang, nhắc sao lưu và chân trang được ẩn (lớp "fs" trên <body>, xem editor.css).
+ * Thử toàn màn hình thật của trình duyệt trên cả trang (để thông báo và hộp thoại vẫn hiện); không được (iPhone, khung nhúng)
+ * thì chỉ phủ kín cửa sổ bằng CSS. Thoát bằng nút, phím Esc hoặc phím thoát của trình duyệt.
  */
-export class Fullscreen3D {
+export class Fullscreen {
   private readonly off: (() => void)[] = [];
+  private scrollY = 0;
 
   constructor(
-    private readonly box: HTMLElement,
     private readonly btn: HTMLButtonElement,
+    private readonly label: HTMLElement,
+    private readonly body: HTMLElement = document.body,
   ) {
     const onChange = (): void => {
       // trình duyệt tự thoát toàn màn hình (phím Esc): đồng bộ lại phần phủ kín bằng CSS
@@ -18,7 +22,7 @@ export class Fullscreen3D {
   }
 
   get on(): boolean {
-    return this.box.classList.contains('full');
+    return this.body.classList.contains('fs');
   }
 
   toggle(): void {
@@ -27,23 +31,27 @@ export class Fullscreen3D {
 
   set(on: boolean): void {
     if (on === this.on) return;
-    this.box.classList.toggle('full', on);
+    // ẩn đầu trang làm trang ngắn lại: nhớ chỗ đang cuộn để trả về khi thoát
+    if (on) this.scrollY = window.scrollY;
+    this.body.classList.toggle('fs', on);
     this.btn.setAttribute('aria-pressed', String(on));
-    this.btn.textContent = on ? 'Thoát toàn màn hình' : 'Toàn màn hình';
+    this.label.textContent = on ? 'Thoát toàn màn hình' : 'Toàn màn hình';
     document.documentElement.style.overflow = on ? 'hidden' : '';
     if (on) {
       try {
-        void this.box.requestFullscreen?.()?.catch(() => {});
+        void document.documentElement.requestFullscreen?.()?.catch(() => {});
       } catch {
         /* không bật được toàn màn hình thật: vẫn phủ kín bằng CSS */
       }
-      this.box.focus();
-    } else if (document.fullscreenElement) {
-      try {
-        void document.exitFullscreen?.()?.catch(() => {});
-      } catch {
-        /* bỏ qua */
+    } else {
+      if (document.fullscreenElement) {
+        try {
+          void document.exitFullscreen?.()?.catch(() => {});
+        } catch {
+          /* bỏ qua */
+        }
       }
+      if (typeof window.scrollTo === 'function') window.scrollTo(0, this.scrollY);
     }
   }
 

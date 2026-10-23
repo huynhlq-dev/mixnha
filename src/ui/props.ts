@@ -1,5 +1,7 @@
 import type { RoomDimKey } from '../core/limits';
-import type { AnyItem, FloorItem, Layout, Scope, WallItem } from '../core/types';
+import type { AnyItem, DoorItem, FloorItem, Layout, OpeningKind, Scope, WallItem, WindowItem } from '../core/types';
+import { isWallKey } from '../data/walls';
+import type { WallKey } from '../data/schema';
 import type { Mode } from '../views/host';
 import type { Els } from './els';
 import { markSwatches } from './swatches';
@@ -14,10 +16,18 @@ export interface SelModel {
   custom: boolean;
 }
 
+/** Cửa đi hoặc cửa sổ đang chọn, kèm khoảng cho phép của vị trí và chiều rộng. */
+export interface OpeningModel {
+  kind: OpeningKind;
+  item: DoorItem | WindowItem;
+  ranges: { pos: { min: number; max: number }; w: { min: number; max: number } };
+}
+
 export interface PropsModel {
   layout: Layout;
   mode: Mode;
   sel: SelModel | null;
+  opening: OpeningModel | null;
 }
 
 const round1 = (v: number): number => Math.round(v * 10) / 10;
@@ -29,8 +39,8 @@ function setVal(el: HTMLInputElement, v: string | number): void {
 
 export function emptyText(mode: Mode): string {
   if (mode === '3d') return 'Bấm vào một món trong khung 3D để chọn, kéo để di chuyển, rồi đổi màu, kích thước, xoay hoặc xóa ngay ở đây.';
-  if (mode === 'elev') return 'Bấm vào một món trên tường để đổi màu, kích thước và độ cao so với sàn.';
-  return 'Bấm vào một món trên bản vẽ để đổi màu, xoay, xem kích thước.';
+  if (mode === 'elev') return 'Bấm vào một món trên tường để đổi màu, kích thước và độ cao so với sàn. Bấm vào cửa đi hoặc cửa sổ để dời chỗ.';
+  return 'Bấm vào một món trên bản vẽ để đổi màu, xoay, xem kích thước. Bấm vào cửa đi hoặc cửa sổ trên tường để dời chỗ.';
 }
 
 export function paintRotation(els: Els, it: FloorItem): void {
@@ -40,16 +50,19 @@ export function paintRotation(els: Els, it: FloorItem): void {
 
 /** Cập nhật cột bên phải (phòng, màu, món đang chọn) và các nút thao tác nhanh theo dữ liệu hiện tại. */
 export function updateProps(els: Els, m: PropsModel): void {
-  const { layout: l, sel } = m;
+  const { layout: l, sel, opening: op } = m;
   markSwatches(els.floorSw, l.floor);
   markSwatches(els.wallSw, l.wall);
   setVal(els.rW, l.W);
   setVal(els.rH, l.H);
   setVal(els.rC, l.ceil);
 
-  els.selEmpty.hidden = !!sel;
+  els.selHead.textContent = op ? (op.kind === 'door' ? 'Cửa đi đang chọn' : 'Cửa sổ đang chọn') : 'Món đang chọn';
+  els.selEmpty.hidden = !!sel || !!op;
   els.selBox.hidden = !sel;
+  els.opBox.hidden = !op;
   els.selEmpty.textContent = emptyText(m.mode);
+  if (op) paintOpening(els, op);
 
   const onWall = !!sel && sel.scope !== 'floor';
   const locked = !!sel?.item.locked;
@@ -74,9 +87,24 @@ export function updateProps(els: Els, m: PropsModel): void {
     for (const el of [els.selW, els.selD, els.selY, els.selRot, els.btnRotL, els.btnRotR, els.rotKnob, els.btnDel]) el.disabled = locked;
   }
 
-  els.mRotL.disabled = els.mRotR.disabled = !sel || onWall || locked;
+  // nút xoay nhanh dùng cho đồ sàn chưa khóa, và cho cửa đi (xoay hướng mở cánh)
+  els.mRotL.disabled = els.mRotR.disabled = !((!!sel && !onWall && !locked) || op?.kind === 'door');
   els.mDup.disabled = !sel;
-  els.mDel.disabled = !sel || locked;
+  els.mDel.disabled = (!sel && !op) || locked;
+}
+
+function paintOpening(els: Els, op: OpeningModel): void {
+  const o = op.item;
+  for (const b of els.opWalls.querySelectorAll<HTMLElement>('[data-wall]')) b.setAttribute('aria-pressed', String(b.dataset.wall === o.wall));
+  els.lblOpPos.textContent = o.wall === 'T' || o.wall === 'B' ? 'Cách góc trái (cm)' : 'Cách góc trên (cm)';
+  els.opPos.min = String(op.ranges.pos.min);
+  els.opPos.max = String(op.ranges.pos.max);
+  els.opW.min = String(op.ranges.w.min);
+  els.opW.max = String(op.ranges.w.max);
+  setVal(els.opPos, o.pos);
+  setVal(els.opW, o.w);
+  els.opDoor.hidden = op.kind !== 'door';
+  els.opSwing.setAttribute('aria-pressed', String(op.kind === 'door' && (o as DoorItem).swing === 'out'));
 }
 
 export interface PropsApp {
@@ -84,6 +112,13 @@ export interface PropsApp {
   setRoomDim(key: RoomDimKey, raw: string, final: boolean): number | null;
   /** Ô thứ hai của cặp rộng × sâu là "d": sâu với đồ sàn, cao với đồ tường. */
   setField(field: 'w' | 'd' | 'y', raw: string, final: boolean): number | null;
+  /** Cửa đang chọn: đổi vị trí (cách góc, cm) hoặc chiều rộng. Trả về số đã dùng, hoặc null nếu chưa áp dụng gì. */
+  setOpening(field: 'pos' | 'w', raw: string, final: boolean): number | null;
+  /** Chuyển cửa đang chọn sang tường khác. */
+  setOpeningWall(wall: WallKey): void;
+  /** Cửa đi đang chọn: đổi bên bản lề, hoặc đổi mở vào trong, ra ngoài. */
+  flipDoorHinge(): void;
+  toggleDoorSwing(): void;
   /** Trả về góc đã dùng (đưa về 0 đến 360), hoặc null nếu món không xoay được. */
   setRotation(deg: number, final: boolean): number | null;
   rotateBy(delta: number): void;
@@ -122,6 +157,24 @@ export function bindProps(els: Els, app: PropsApp): void {
       if (v !== null) el.value = String(v);
     });
   }
+  const openingFields: [HTMLInputElement, 'pos' | 'w'][] = [
+    [els.opPos, 'pos'],
+    [els.opW, 'w'],
+  ];
+  for (const [el, field] of openingFields) {
+    el.addEventListener('input', () => void app.setOpening(field, el.value, false));
+    el.addEventListener('change', () => {
+      const v = app.setOpening(field, el.value, true);
+      if (v !== null) el.value = String(v);
+    });
+  }
+  els.opDel.addEventListener('click', () => app.removeSelected());
+  els.opFlip.addEventListener('click', () => app.flipDoorHinge());
+  els.opSwing.addEventListener('click', () => app.toggleDoorSwing());
+  els.opWalls.addEventListener('click', (e) => {
+    const w = (e.target as Element).closest<HTMLElement>('[data-wall]')?.dataset.wall;
+    if (isWallKey(w)) app.setOpeningWall(w);
+  });
   els.selRot.addEventListener('input', () => {
     const v = parseFloat(els.selRot.value);
     if (Number.isFinite(v)) app.setRotation(v, false);

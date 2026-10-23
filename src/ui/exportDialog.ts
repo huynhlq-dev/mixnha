@@ -1,6 +1,6 @@
 import { escapeHtml } from '../core/format';
-import type { Layouts } from '../core/types';
-import { ROOM_IDS, ROOMS, type RoomId } from '../data/rooms';
+import type { AptPlan, Layouts } from '../core/types';
+import type { RoomEntry, RoomId } from '../data/rooms';
 import { buildFile, byteLength, makeFilename, serializeFile, summarizeExport, type ExportScope } from '../storage/file';
 import { copyText, downloadText, openDialog } from './dialog';
 import type { Els } from './els';
@@ -12,6 +12,10 @@ export interface ExportMeta {
 
 export interface ExportDeps {
   layouts: () => Layouts;
+  /** Vị trí các phòng trong mô hình căn hộ. */
+  apt: () => AptPlan;
+  /** Các phòng của căn hộ theo thứ tự tab. */
+  rooms: () => readonly RoomEntry[];
   room: () => RoomId;
   meta: () => ExportMeta;
   setMeta: (m: ExportMeta) => void;
@@ -53,8 +57,9 @@ export class ExportDialog {
     const m = deps.meta();
     els.exName.value = m.name;
     els.exNote.value = m.note;
-    els.exScopeAll.textContent = `Cả ${ROOM_IDS.length} phòng`;
-    els.exScopeRoom.textContent = `Chỉ phòng đang mở: ${ROOMS[deps.room()].name}`;
+    const rooms = deps.rooms();
+    els.exScopeAll.textContent = `Cả ${rooms.length} phòng`;
+    els.exScopeRoom.textContent = `Chỉ phòng đang mở: ${rooms.find((r) => r.id === deps.room())?.name ?? ''}`;
     this.radio('all').checked = true;
     this.say('', false);
     this.update();
@@ -80,13 +85,13 @@ export class ExportDialog {
     const { els, deps } = this;
     const now = deps.now();
     const name = els.exName.value;
-    const file = buildFile(deps.layouts(), { scope: this.scope(), room: deps.room(), name, note: els.exNote.value, now });
+    const file = buildFile(deps.layouts(), { scope: this.scope(), room: deps.room(), name, note: els.exNote.value, now, apt: deps.apt(), rooms: deps.rooms() });
     return { text: serializeFile(file), filename: makeFilename(file.name, now) };
   }
 
   private update(): void {
     const { text, filename } = this.build();
-    const s = summarizeExport(this.deps.layouts(), this.scope(), this.deps.room());
+    const s = summarizeExport(this.deps.layouts(), this.scope(), this.deps.room(), this.deps.rooms());
     this.els.exSummary.innerHTML = `${escapeHtml(exportSummary(s.rooms, s.items, byteLength(text)))}<br>${escapeHtml(filename)}`;
   }
 

@@ -1,7 +1,8 @@
 import { v2ToV3 } from './v2-to-v3';
+import { v3ToV4 } from './v3-to-v4';
 
 /** Số phiên bản định dạng hiện tại, dùng cho cả dữ liệu tự lưu và file JSON xuất ra. */
-export const CURRENT_VER = 3;
+export const CURRENT_VER = 4;
 
 export type RawDoc = Record<string, unknown>;
 
@@ -11,6 +12,7 @@ export type RawDoc = Record<string, unknown>;
  */
 const MIGRATIONS: Record<number, (doc: RawDoc) => RawDoc> = {
   2: v2ToV3,
+  3: v3ToV4,
 };
 
 /** Đưa tài liệu cũ lên phiên bản hiện tại. Phiên bản không rõ hoặc mới hơn thì trả về nguyên trạng. */

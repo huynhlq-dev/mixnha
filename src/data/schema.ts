@@ -58,14 +58,43 @@ export interface ItemDef {
   replacedBy?: string;
 }
 
-export interface DoorDef {
+/** Chỗ mở trên tường: cửa đi hoặc cửa sổ. */
+export interface OpeningDef {
   wall: WallKey;
   /** Khoảng cách từ góc (cm) tới mép cửa. */
   pos: number;
   w: number;
 }
 
-export interface WindowDef extends DoorDef {
+export type DoorHinge = 'start' | 'end';
+export type DoorSwing = 'in' | 'out';
+
+export interface DoorDef extends OpeningDef {
+  /** Bản lề ở đầu nào của cửa: "start" là đầu gần góc (theo pos, mặc định), "end" là đầu xa. */
+  hinge?: DoorHinge;
+  /** Cánh mở vào trong phòng ("in", mặc định) hay ra ngoài ("out"). */
+  swing?: DoorSwing;
+}
+
+/**
+ * Một loại cửa đi hoặc cửa sổ trong thư viện (nhóm "Cửa đi", "Cửa sổ"). Bấm hoặc kéo vào bản vẽ thì thành một cửa trên tường.
+ * Mã không được trùng mã của món nào trong ItemDef, vì cả hai đi chung đường kéo thả.
+ */
+export interface OpeningPreset {
+  /** Duy nhất, chữ thường, số, gạch ngang. Không đổi sau khi đã đưa lên. */
+  id: string;
+  kind: 'door' | 'win';
+  name: string;
+  /** Chiều rộng (cm). */
+  w: number;
+  /** Chỉ cửa sổ: độ cao bậu và chiều cao (cm). Không ghi thì theo mặc định (bậu 90, cao 120). */
+  sill?: number;
+  h?: number;
+  /** Màu ô nhỏ trong thư viện. */
+  color: string;
+}
+
+export interface WindowDef extends OpeningDef {
   /** Độ cao bậu cửa sổ (cm), mặc định 90. */
   sill?: number;
   /** Chiều cao cửa sổ (cm), mặc định 120. */

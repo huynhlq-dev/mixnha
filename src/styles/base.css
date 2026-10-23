@@ -19,7 +19,6 @@ body {
   padding-block: 0 48px;
 }
 .wrap {
-  max-width: 1240px;
   margin: 0 auto;
 }
 h1,
@@ -120,6 +119,42 @@ button {
 }
 .btn.pri:disabled:hover {
   background: var(--accent);
+}
+/* Nút gạt bật, tắt một tùy chọn: dùng cùng lớp .btn, trạng thái ở aria-checked */
+.btn.switch {
+  gap: 8px;
+}
+.switch .track {
+  position: relative;
+  flex: none;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--line);
+  transition: background 0.15s ease;
+}
+.switch .thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease;
+}
+.switch[aria-checked='true'] .track {
+  background: var(--accent);
+}
+.switch[aria-checked='true'] .thumb {
+  transform: translateX(12px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .switch .track,
+  .switch .thumb {
+    transition: none;
+  }
 }
 .link {
   border: 0;

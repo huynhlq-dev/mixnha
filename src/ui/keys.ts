@@ -21,6 +21,12 @@ export interface KeyContext {
   hasSel: boolean;
   /** Món đang chọn là đồ đặt sàn, tức xoay được. */
   selFloor: boolean;
+  /** Đang chọn một cửa đi hoặc cửa sổ: dịch được bằng mũi tên, xóa được bằng Delete. */
+  selOpening: boolean;
+  /** Đang chọn cửa đi: R xoay hướng mở cánh. */
+  selDoor: boolean;
+  /** Đang chỉnh bố cục căn hộ và đã chọn một phòng: mũi tên dời phòng, Delete xóa phòng (hoàn tác được). */
+  selRoom: boolean;
 }
 
 export type KeyAction =
@@ -45,9 +51,9 @@ export function keyAction(k: KeyInfo, c: KeyContext): KeyAction | null {
     if (key === 'y' && !k.shift) return { type: 'redo' };
     return null;
   }
-  if (k.alt || !c.hasSel) return null;
+  if (k.alt || !(c.hasSel || c.selOpening || c.selRoom)) return null;
   if (key === 'delete' || key === 'backspace') return { type: 'remove' };
-  if (key === 'r') return c.selFloor ? { type: 'rotate', delta: k.shift ? -90 : 90 } : null;
+  if (key === 'r') return c.selFloor || c.selDoor ? { type: 'rotate', delta: k.shift ? -90 : 90 } : null;
   const dir = ARROWS[key];
   // trong 3D mũi tên là để xoay camera, khung 3D tự xử lý khi đang được chọn
   if (dir && c.mode !== '3d') return { type: 'nudge', dir, step: k.shift ? 25 : 5 };

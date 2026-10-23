@@ -30,7 +30,8 @@ import { clamp, snapAngle, wallLength, boxOf } from '../core/geometry';
 import { canEdit, findItem, floorHeight, wallDepth } from '../core/layout';
 import { LIMITS } from '../core/limits';
 import { openingsOn, type RoomGeo } from '../core/room';
-import type { FloorItem, Selection, WallItem } from '../core/types';
+import { roomTypeFromDragId } from '../core/rooms';
+import type { FloorItem, Layout, Selection, WallItem } from '../core/types';
 import { WALL_KEYS } from '../data/walls';
 import type { WallKey } from '../data/schema';
 import type { DropAt, Host, PenTarget } from './host';
@@ -46,13 +47,24 @@ type ItemDrag =
   | { key: 'rot'; sel: Selection; plane: Plane; moved: boolean }
   | { key: 'locked'; told: boolean };
 
+/** Một phòng trong cảnh: vị trí góc trên trái, cỡ, và bốn bức tường (để làm mờ tường chắn tầm nhìn). */
+interface Rig {
+  ox: number;
+  oz: number;
+  W: number;
+  H: number;
+  walls: Partial<Record<WallKey, Group>>;
+  /** Tường nằm giữa camera và phòng (đang mờ). */
+  faded: Record<WallKey, boolean>;
+}
+
 const WALL_THICKNESS = 10;
 const MIN_DIST = 150;
 const MAX_DIST = 5000;
 const CLICK_SLOP = 5;
 const FOV = 40;
 
-/** Màu theo biến CSS đang áp dụng (đúng cả khi bật chế độ tối). */
+/** Màu theo biến CSS đang áp dụng (đúng cả khi bật chế độ tối). Đổi giao diện thì gọi themeChanged để lấy lại. */
 function cssColor(name: string, fallback: string): Color {
   const v = typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement).getPropertyValue(name).trim() : '';
   try {
@@ -125,31 +137,27 @@ function disposeGroup(g: Object3D): void {
  * Kéo nền để xoay, kéo món để di chuyển, cuộn hoặc chụm hai ngón để phóng to.
  */
 export class Scene3D {
-  /** Gọi khi chế độ tự xoay đổi (do người dùng chạm vào cảnh). */
-  onAutoChange: (on: boolean) => void = () => {};
-
   private renderer: WebGLRenderer | null = null;
   private scene: Scene | null = null;
   private camera: PerspectiveCamera | null = null;
   private content: Group | null = null;
-  private walls: Partial<Record<WallKey, Group>> = {};
-  /** Tường nằm giữa camera và phòng (đang mờ). */
-  private faded: Record<WallKey, boolean> = { T: false, R: false, B: false, L: false };
+  /** Từng phòng đang dựng: một phòng khi xem một phòng, nhiều phòng khi xem cả căn hộ. */
+  private rigs: Rig[] = [];
   private msg: HTMLElement | null = null;
 
   private yaw = -0.75;
   private pitch = 0.62;
   private dist = 900;
-  private auto = true;
+  /** Hộp bao của cảnh (một phòng, hoặc cả căn hộ): góc trên trái trên mặt sàn, rộng, dọc, cao (cm). Camera nhìn vào tâm hộp này. */
+  private ox = 0;
+  private oz = 0;
   private W = 400;
   private H = 350;
   private C = 270;
 
   private raf = 0;
-  private frame = 0;
   private active = false;
   private dirty = true;
-  private dragging = false;
   private roomKey: string | null = null;
   private ptr = new Map<number, { x: number; y: number }>();
   private pinch = 0;
@@ -170,10 +178,6 @@ export class Scene3D {
     return this.failedFlag;
   }
 
-  get autoRotate(): boolean {
-    return this.auto;
-  }
-
   /* ---------- Vòng đời ---------- */
 
   /** Hiện cảnh 3D: khởi tạo ở lần đầu, dựng lại theo dữ liệu hiện tại và bắt đầu vẽ. */
@@ -182,7 +186,7 @@ export class Scene3D {
     if (!this.renderer) return;
     this.active = true;
     this.resize();
-    const key = this.host.geo().id;
+    const key = this.host.view().overview ? 'apartment' : this.host.geo().id;
     if (this.roomKey !== key) {
       this.roomKey = key;
       this.dirty = true;
@@ -202,6 +206,12 @@ export class Scene3D {
   invalidate(): void {
     this.dirty = true;
     this.start();
+  }
+
+  /** Đã đổi giao diện sáng, tối: lấy lại màu nền rồi dựng lại cảnh để lưới và màu khung chọn theo màu mới. */
+  themeChanged(): void {
+    if (this.scene) this.scene.background = cssColor('--surface', '#ffffff');
+    this.invalidate();
   }
 
   /** Đổi phòng thì lần show kế tiếp đặt lại góc nhìn. */
@@ -233,6 +243,7 @@ export class Scene3D {
     this.box.insertBefore(r.domElement, this.box.firstChild);
     this.renderer = r;
     this.scene = new Scene();
+    this.scene.background = cssColor('--surface', '#ffffff');
     this.camera = new PerspectiveCamera(FOV, 1.6, 5, 12000);
     // ánh sáng vừa phải để màu 3D gần đúng màu đã chọn: mặt trên khoảng 100%, mặt đứng 72 đến 80%
     this.scene.add(new AmbientLight(0xffffff, 0.72));
@@ -323,27 +334,12 @@ export class Scene3D {
     this.dist = clamp(this.dist * f, MIN_DIST, MAX_DIST);
   }
 
-  toggleAuto(): void {
-    this.setAuto(!this.auto);
-  }
-
-  /** Tắt tự xoay, ví dụ khi người dùng bắt đầu thêm món hoặc đã đặt chế độ giảm chuyển động. */
-  stopAuto(): void {
-    this.setAuto(false);
-  }
-
-  private setAuto(on: boolean): void {
-    if (this.auto === on) return;
-    this.auto = on;
-    this.onAutoChange(on);
-  }
-
   private applyCamera(): void {
     const cam = this.camera;
     if (!cam) return;
-    const tx = this.W / 2;
+    const tx = this.ox + this.W / 2;
     const ty = this.C * 0.3;
-    const tz = this.H / 2;
+    const tz = this.oz + this.H / 2;
     const cp = Math.cos(this.pitch);
     cam.position.set(tx + this.dist * cp * Math.sin(this.yaw), ty + this.dist * Math.sin(this.pitch), tz + this.dist * cp * Math.cos(this.yaw));
     cam.lookAt(tx, ty, tz);
@@ -352,19 +348,21 @@ export class Scene3D {
   /** Tường nằm giữa camera và phòng thì mờ đi để nhìn xuyên vào trong. */
   private fadeWalls(): void {
     const c = this.camera!.position;
-    this.faded = { T: c.z < -5, B: c.z > this.H + 5, L: c.x < -5, R: c.x > this.W + 5 };
-    for (const wl of WALL_KEYS) {
-      const g = this.walls[wl];
-      if (!g) continue;
-      const out = this.faded[wl];
-      for (const o of g.children) {
-        if (o.userData.edge) {
-          o.visible = !out;
-        } else {
-          const m = (o as Mesh).material as Material;
-          m.transparent = out;
-          m.opacity = out ? 0.1 : 1;
-          m.depthWrite = !out;
+    for (const rig of this.rigs) {
+      rig.faded = { T: c.z < rig.oz - 5, B: c.z > rig.oz + rig.H + 5, L: c.x < rig.ox - 5, R: c.x > rig.ox + rig.W + 5 };
+      for (const wl of WALL_KEYS) {
+        const g = rig.walls[wl];
+        if (!g) continue;
+        const out = rig.faded[wl];
+        for (const o of g.children) {
+          if (o.userData.edge) {
+            o.visible = !out;
+          } else {
+            const m = (o as Mesh).material as Material;
+            m.transparent = out;
+            m.opacity = out ? 0.1 : 1;
+            m.depthWrite = !out;
+          }
         }
       }
     }
@@ -390,15 +388,12 @@ export class Scene3D {
   private loop(): void {
     this.raf = 0;
     if (!this.active || !this.renderer || !this.scene || !this.camera) return;
-    this.frame++;
     if (this.dirty) {
       this.dirty = false;
       this.build();
     }
-    if (this.auto && !this.dragging) this.yaw += 0.004;
     this.applyCamera();
     this.fadeWalls();
-    if (this.frame % 45 === 1) this.scene.background = cssColor('--surface', '#ffffff');
     this.renderer.render(this.scene, this.camera);
     this.raf = requestAnimationFrame(() => this.loop());
   }
@@ -408,33 +403,86 @@ export class Scene3D {
   private build(): void {
     const scene = this.scene;
     if (!scene) return;
-    const L = this.host.layout();
-    const R = this.host.geo();
-    const reg = this.host.registry;
-    const v = this.host.view();
-    const C = R.ceil;
-    this.W = R.W;
-    this.H = R.H;
-    this.C = C;
     if (this.content) {
       scene.remove(this.content);
       disposeGroup(this.content);
     }
     const root = new Group();
+    this.rigs = [];
+    if (this.host.view().overview) this.buildApartment(root);
+    else {
+      const R = this.host.geo();
+      this.ox = 0;
+      this.oz = 0;
+      this.W = R.W;
+      this.H = R.H;
+      this.C = R.ceil;
+      this.buildRoom(root, this.host.layout(), R, true);
+    }
+    scene.add(root);
+    this.content = root;
+  }
+
+  /** Cả căn hộ: mỗi phòng một nhóm đặt đúng vị trí trong mô hình, một lưới nền chung. Chỉ để xem nên không gắn nhãn chọn, không khung chọn. */
+  private buildApartment(root: Group): void {
+    const rooms = this.host.apartment();
+    const rects = this.host.aptRects();
+    let x0 = Infinity;
+    let z0 = Infinity;
+    let x1 = -Infinity;
+    let z1 = -Infinity;
+    let ceil = 0;
+    for (const room of rooms) {
+      const rc = rects[room.id];
+      if (!rc) continue;
+      const g = new Group();
+      g.position.set(rc.x, 0, rc.y);
+      root.add(g);
+      const rig = this.buildRoom(g, room.layout, room.geo, false);
+      rig.ox = rc.x;
+      rig.oz = rc.y;
+      x0 = Math.min(x0, rc.x);
+      z0 = Math.min(z0, rc.y);
+      x1 = Math.max(x1, rc.x + rc.w);
+      z1 = Math.max(z1, rc.y + rc.h);
+      ceil = Math.max(ceil, room.geo.ceil);
+    }
+    if (!this.rigs.length) return;
+    this.ox = x0;
+    this.oz = z0;
+    this.W = x1 - x0;
+    this.H = z1 - z0;
+    this.C = ceil;
+    const size = Math.ceil((Math.max(this.W, this.H) * 2.2) / 100) * 100;
+    const grid = new GridHelper(size, size / 100, cssColor('--line', '#cbd5d1'), cssColor('--grid', '#dde4e1'));
+    grid.position.set(x0 + this.W / 2, -4, z0 + this.H / 2);
+    root.add(grid);
+  }
+
+  /**
+   * Dựng một phòng vào `parent` (tọa độ của phòng: góc trên trái là 0, 0). interactive: có nhãn để chọn món, khung chọn và khung cảnh báo,
+   * lưới nền riêng; không thì chỉ là hình để xem.
+   */
+  private buildRoom(root: Group, L: Layout, R: RoomGeo, interactive: boolean): Rig {
+    const reg = this.host.registry;
+    const v = this.host.view();
+    const C = R.ceil;
 
     const floor = addBox(root, R.W, 4, R.H, R.W / 2, -2, R.H / 2, new Color(L.floor));
-    floor.userData.tg = { t: 'floor' } satisfies Tag;
-    const size = Math.ceil((Math.max(R.W, R.H) * 2.6) / 100) * 100;
-    const grid = new GridHelper(size, size / 100, cssColor('--line', '#cbd5d1'), cssColor('--grid', '#dde4e1'));
-    grid.position.set(R.W / 2, -4, R.H / 2);
-    root.add(grid);
+    if (interactive) floor.userData.tg = { t: 'floor' } satisfies Tag;
+    if (interactive) {
+      const size = Math.ceil((Math.max(R.W, R.H) * 2.6) / 100) * 100;
+      const grid = new GridHelper(size, size / 100, cssColor('--line', '#cbd5d1'), cssColor('--grid', '#dde4e1'));
+      grid.position.set(R.W / 2, -4, R.H / 2);
+      root.add(grid);
+    }
 
-    const info = analysePlan(L, R, reg);
+    const info = interactive ? analysePlan(L, R, reg) : null;
     const accent = cssColor('--accent', '#1e5eff');
     const warn = cssColor('--warn', '#c2410c');
     // món đang chọn hiện khung xanh, món chồng lấn hoặc chắn cửa hiện khung cam
     const mark = (g: Group, selected: boolean, bad: boolean): void => {
-      if (!selected && !bad) return;
+      if (!interactive || (!selected && !bad)) return;
       g.updateMatrixWorld(true);
       const b = new Box3().setFromObject(g).expandByScalar(2);
       const sz = b.getSize(new Vector3());
@@ -449,23 +497,23 @@ export class Scene3D {
     for (const it of L.items) {
       const g = this.floorItem(it);
       root.add(g);
-      const selected = v.sel?.scope === 'floor' && v.sel.uid === it.uid;
-      mark(g, selected, info.bad.has(it.uid));
+      const selected = interactive && v.sel?.scope === 'floor' && v.sel.uid === it.uid;
+      mark(g, selected, !!info?.bad.has(it.uid));
       if (selected && it.z !== 0 && canEdit(it, 'rotate')) this.rotationHandle(root, it, accent);
     }
     for (const wl of WALL_KEYS) {
       for (const it of L.walls[wl]) {
         const g = this.wallItem(wl, it, R);
         root.add(g);
-        mark(g, v.sel?.scope === wl && v.sel.uid === it.uid, false);
+        mark(g, interactive && v.sel?.scope === wl && v.sel.uid === it.uid, false);
       }
     }
 
     const paint = new Color(L.wall);
-    this.walls = {};
+    const walls: Partial<Record<WallKey, Group>> = {};
     for (const wl of WALL_KEYS) {
       const g = new Group();
-      g.userData.tg = { t: 'wall', wl } satisfies Tag;
+      if (interactive) g.userData.tg = { t: 'wall', wl } satisfies Tag;
       const pieces = wallPieces(R, wl);
       for (const r of pieces.rects) {
         const pl = placeWall(wl, R, r, WALL_THICKNESS);
@@ -477,7 +525,7 @@ export class Scene3D {
         addBox(root, pl.s[0], pl.s[1], pl.s[2], pl.p[0], pl.p[1], pl.p[2], 0xbfd7e3, { opacity: 0.35, noEdge: true });
       }
       root.add(g);
-      this.walls[wl] = g;
+      walls[wl] = g;
     }
     for (const [x, z] of [
       [-5, -5],
@@ -487,8 +535,9 @@ export class Scene3D {
     ] as const) {
       addBox(root, 10, C, 10, x, C / 2, z, shade(L.wall, 1.0));
     }
-    scene.add(root);
-    this.content = root;
+    const rig: Rig = { ox: 0, oz: 0, W: R.W, H: R.H, walls, faded: { T: false, R: false, B: false, L: false } };
+    this.rigs.push(rig);
+    return rig;
   }
 
   private floorItem(it: FloorItem): Group {
@@ -548,7 +597,7 @@ export class Scene3D {
     for (const h of this.ray(e).intersectObjects(this.content.children, true)) {
       const tag = tagOf(h.object);
       if (!tag) continue;
-      if (tag.t === 'wall' && this.faded[tag.wl]) continue;
+      if (tag.t === 'wall' && this.rigs[0]?.faded[tag.wl]) continue;
       return { tag, point: h.point };
     }
     return null;
@@ -577,11 +626,11 @@ export class Scene3D {
       /* vẫn dùng được */
     }
     this.ptr.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    this.dragging = true;
     this.pinch = 0;
     this.downAt = { x: e.clientX, y: e.clientY };
     this.idrag = null;
-    if (this.ptr.size === 1 && !this.host.view().pen && this.content) this.beginItemDrag(e);
+    // xem 3D cả căn hộ chỉ để xem: kéo là xoay cảnh, không chọn hay kéo đồ
+    if (this.ptr.size === 1 && !this.host.view().pen && !this.host.view().overview && this.content) this.beginItemDrag(e);
   }
 
   private onMove(e: PointerEvent): void {
@@ -609,7 +658,7 @@ export class Scene3D {
 
   private onUp(e: PointerEvent): void {
     const click = !!this.downAt && Math.hypot(e.clientX - this.downAt.x, e.clientY - this.downAt.y) < CLICK_SLOP;
-    if (e.type === 'pointerup' && this.ptr.size === 1 && click) {
+    if (e.type === 'pointerup' && this.ptr.size === 1 && click && !this.host.view().overview) {
       if (this.host.view().pen) this.host.pen(this.penTarget(e));
       else if (!this.idrag && this.host.view().sel) this.host.select(null);
     }
@@ -617,7 +666,6 @@ export class Scene3D {
     this.idrag = null;
     if (d && 'moved' in d && d.moved) this.host.changed();
     this.ptr.delete(e.pointerId);
-    if (!this.ptr.size) this.dragging = false;
     this.pinch = 0;
   }
 
@@ -626,13 +674,11 @@ export class Scene3D {
     const view = this.host.view();
     if (h?.tag.t === 'rot') {
       if (view.sel?.scope === 'floor') {
-        this.setAuto(false);
         this.idrag = { key: 'rot', sel: view.sel, plane: new Plane(new Vector3(0, 1, 0), -14), moved: false };
       }
       return;
     }
     if (!h || h.tag.t !== 'item') return;
-    this.setAuto(false);
     const sel = h.tag.sel;
     this.host.select(sel);
     const it = findItem(this.host.layout(), sel);
@@ -726,14 +772,21 @@ export class Scene3D {
     e.preventDefault();
     const id = e.dataTransfer?.getData('text/plain');
     if (!id) return;
+    if (this.host.view().overview) {
+      // 3D cả căn hộ chỉ để xem: chỉ nhận loại phòng (thêm phòng mới), đồ thì phải thả ở mặt bằng
+      if (roomTypeFromDragId(id)) this.host.drop(id, null);
+      else this.host.notice('Muốn thêm đồ, hãy chuyển sang Mặt bằng hoặc zoom vào một phòng.');
+      return;
+    }
     const def = this.host.registry.resolve(id);
-    if (!def) return;
-    this.setAuto(false);
+    // cửa đi, cửa sổ là món nằm trên tường nhưng không có trong danh sách đồ: thả lên tường thì đặt đúng chỗ đó, thả xuống sàn thì vào tường gần nhất
+    const isOpening = !!this.host.registry.opening(id);
+    if (!def && !isOpening) return;
     const R = this.host.geo();
     const h = this.hit(e);
     let at: DropAt | null = null;
-    if (def.place === 'wall') {
-      if (h?.tag.t === 'wall') at = { kind: 'wall', wall: h.tag.wl, s: wallS(h.tag.wl, h.point, R), y: Math.max(0, h.point.y - def.h / 2) };
+    if (def?.place === 'wall' || (isOpening && h?.tag.t === 'wall')) {
+      if (h?.tag.t === 'wall') at = { kind: 'wall', wall: h.tag.wl, s: wallS(h.tag.wl, h.point, R), y: def ? Math.max(0, h.point.y - def.h / 2) : null };
     } else {
       const pt = h?.tag.t === 'floor' ? h.point : this.planeHit(e, new Plane(new Vector3(0, 1, 0), 0));
       if (pt) at = { kind: 'plan', x: pt.x, y: pt.z };

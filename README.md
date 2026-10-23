@@ -2,11 +2,19 @@
 
 Xếp đồ nội thất cho căn hộ trên bản vẽ đúng tỉ lệ. Chạy hoàn toàn trong trình duyệt, không có máy chủ, không cần tài khoản.
 
-- **Mặt bằng** (nhìn từ trên): kéo thả đồ từ thư viện, xoay (nút −90° / +90°, kéo tay nắm xoay tự do, phím R), bám lưới 5 cm, hiện kích thước và khoảng cách tới tường, cảnh báo chồng lấn, chắn cửa, lối đi dưới 60 cm.
+- **Dự án mới**: lần mở đầu tiên (chưa có bản tự lưu) hiện hộp thoại **Dự án mới**; nút **Dự án mới** ở đầu trang mở lại hộp thoại bất cứ lúc nào. Chọn **số phòng mỗi loại** (ngủ, khách, bếp và ăn, vệ sinh, làm việc, trống; tổng 1 đến 12 phòng) bằng nút − / +, đặt tên dự án, chọn có kèm đồ mẫu hay để phòng trống. Đã có dự án thì hộp thoại cảnh báo sẽ thay thế và có nút **Xuất file trước**. Bỏ qua ở lần mở đầu thì dùng căn hộ mẫu bốn phòng.
+- **Cả căn hộ (màn hình chính)**: sau khi tạo dự án là **mặt bằng cả căn** nhìn từ trên, vẽ đủ đồ và cửa của mọi phòng, các phòng xếp cạnh nhau theo kích thước (tự xếp lưới, hoặc theo vị trí bạn đã kéo). Thư viện bên trái có đồ sàn, cửa đi, cửa sổ và nhóm Phòng. **Kéo một món thả vào phòng** (bấm thì món vào phòng đang chọn), rồi sửa **đầy đủ như khi xem một phòng**: chọn, kéo, xoay, đổi kích thước, màu, khóa, nhân đôi, xóa, bút màu, kích thước và khoảng cách, kích thước chi tiết, kéo cửa dọc tường, phím tắt, phóng to và dịch bản vẽ, Hoàn tác / Làm lại (một danh sách chung cho cả căn). **Kéo đồ sang phòng khác** thì đồ chuyển sang phòng đó; thả ra hành lang giữa các phòng thì báo và không thêm. Bấm sàn trống của một phòng để chọn phòng (khung chọn, mục **Phòng** ở cột phải để đổi cỡ, màu sàn, màu tường; Bố trí mẫu, Xóa đồ sàn là của phòng đang chọn). Đồ gắn tường (tủ bếp trên, tranh, điều hòa) cần có tường nên thêm ở mặt đứng hoặc 3D của từng phòng.
+- **Hai kiểu xem cả căn**: **Mặt bằng** (sửa được) và **3D** (cả căn hộ trong một cảnh, xoay, phóng to; chỉ để xem, muốn sửa thì về Mặt bằng hoặc zoom vào phòng). Mặt đứng là của từng tường nên chỉ có khi đã zoom vào một phòng.
+- **Zoom vào từng phòng để thiết kế**: bấm đúp một phòng trên mô hình, hoặc bấm tab phòng, hoặc bấm phòng ở danh sách bên trái (hay nút Thiết kế phòng này), thì vùng nhìn **zoom vào** phòng đó rồi vào trình sửa một phòng (Mặt bằng, Mặt đứng, 3D sửa được); nút **← Cả căn hộ** ở đầu khung vẽ zoom ra về mô hình. Máy bật "giảm chuyển động" thì nhảy thẳng, không hiệu ứng. Lần xem cuối được nhớ (mở lại đúng chỗ).
+- **Chỉnh bố cục căn hộ** (nút gạt "Chỉnh bố cục" cạnh tab kiểu xem): lúc này đồ không kéo được mà **kéo phòng để dời** (bám lưới 10 cm, mép phòng hút vào mép phòng bên cạnh, đụng nhau thì trượt dọc theo phòng đó, không bao giờ chồng), **kéo tay nắm** ở cạnh phải, cạnh dưới hoặc góc dưới phải để **đổi kích thước** (góc trên trái đứng yên), hoặc gõ ngang, dọc ở mục Phòng. Phím mũi tên dời phòng 10 cm (giữ Shift: 50 cm), "Xếp lại tự động" để bỏ vị trí đã chốt. Vị trí các phòng được lưu và ghi vào file xuất (xuất cả căn).
+- **Phòng cũng là món trong thư viện**: ở thanh bên trái, nhóm **Phòng** liệt kê các loại phòng (ngủ, khách, bếp và ăn, vệ sinh, làm việc, trống). Bấm một loại thì phòng mới tự vào chỗ trống gần giữa căn, kéo thả vào mô hình thì vào đúng chỗ thả (không bao giờ chồng phòng khác). Phòng mới có mã và tên theo loại (Phòng ngủ 2, ...), đổi tên được ở cột phải. Xóa phòng: chọn phòng rồi bấm **Xóa phòng** (hoặc bật Chỉnh bố cục rồi bấm `Delete`); bản vẽ của phòng đi theo, **Hoàn tác** lấy lại nguyên vẹn. Căn hộ có 1 đến 12 phòng. Nhóm Phòng đứng cuối danh sách ở mọi kiểu xem (xem 3D cả căn thì thư viện chỉ có nhóm này). Điện thoại: thanh nút nhanh có **＋ Thêm đồ** (mở thư viện, trong đó có nhóm Phòng), Xoay, Nhân đôi, Xóa.
+- **Mặt bằng** (nhìn từ trên): kéo thả đồ từ thư viện, xoay (nút −90° / +90°, kéo tay nắm xoay tự do, phím R), bám lưới 5 cm, hiện kích thước và khoảng cách tới tường, nút gạt **Kích thước chi tiết** (món đang chọn hiện số đo ngay giữa từng cạnh, xoay theo món: rộng và sâu ở mặt bằng, rộng và cao ở mặt đứng; chỉ có số, chữ tự co để luôn nhỏ hơn cạnh; không dùng ở 3D), cảnh báo chồng lấn, chắn cửa, lối đi dưới 60 cm.
 - **Mặt đứng** (nhìn thẳng vào từng tường): tủ bếp, tivi, tranh, điều hòa, có vạch mặt bếp 85 cm.
-- **3D xoay 360°**: sửa đồ ngay trong 3D, toàn màn hình.
-- Đổi kích thước phòng, màu sàn / tường / từng món, bút màu (lấy màu, chấm màu), khóa món đã chốt chỗ, Hoàn tác / Làm lại (mỗi phòng 100 bước).
+- **3D xoay 360°** (một phòng): sửa đồ ngay trong 3D.
+- **Toàn màn hình** (nút ở đầu khung vẽ, dùng được ở mặt bằng, mặt đứng và 3D): khung soạn thảo phủ kín màn hình, vẫn có thanh công cụ, thư viện bên trái và bảng chỉnh sửa bên phải để sửa ngay; thoát bằng nút hoặc `Esc`.
+- Đổi kích thước phòng, màu sàn / tường / từng món, bút màu (lấy màu, chấm màu; khối bút màu chỉ trượt ra khi có món đang chọn hoặc đang dùng bút), khóa món đã chốt chỗ, Hoàn tác / Làm lại (mỗi phòng 100 bước).
 - Tự lưu trong trình duyệt. **Xuất / nhập file `.json`** để sao lưu hoặc gửi người khác, có nhắc sao lưu sau 7 ngày chưa xuất.
+- Trên máy tính, khung thiết kế tràn hết bề ngang và vừa khít chiều cao màn hình (không phải cuộn trang): bản vẽ 2D và khung 3D tự co giãn theo khung, hai cột bên cuộn riêng.
 - Dùng được trên điện thoại (thư viện dạng ngăn kéo, thanh nút dưới đáy, chạm và chụm hai ngón).
 - Trang **gallery** (`/gallery.html`): xem mọi món, kể cả món đang làm, ở cùng một tỉ lệ, kèm ảnh 3D và báo lỗi dữ liệu.
 
@@ -36,18 +44,19 @@ npm run dev          # http://localhost:5173  (gallery: /gallery.html)
 src/
   data/       Chỉ có dữ liệu và kiểu, không có logic. Không import gì ngoài thư mục này.
     items/      Khai báo đồ, mỗi nhóm một file; index.ts gom lại (ALL_ITEMS)
-    categories.ts  Nhóm đồ        rooms.ts  4 phòng, cửa, cửa sổ, bố trí mẫu
+    categories.ts  Nhóm đồ        rooms.ts  6 loại phòng, cửa, cửa sổ, bố trí mẫu; căn hộ mặc định
     palettes.ts    Màu sàn, tường, món   shapes.ts  Danh sách kiểu vẽ 3D   schema.ts  Các kiểu dữ liệu
   core/       Hình học và luật, không biết gì về giao diện. Chỉ import data.
     geometry, measure, analyse (lối đi 60 cm, chồng lấn), layout (bản vẽ, khóa món, giới hạn),
-    ops (các thao tác sửa: thêm, xoay, dịch, đổi số đo, khóa, bố trí mẫu), registry (tra món theo mã),
+    ops (các thao tác sửa: thêm, xoay, dịch, đổi số đo, khóa, bố trí mẫu), rooms (mã phòng, phòng mới theo loại, mã kéo thả), project (số phòng mỗi loại, dựng dự án mới), registry (tra món theo mã),
     validate (kiểm tra dữ liệu đồ), color, format, limits
   storage/    Tự lưu, Hoàn tác, xuất / nhập file, nhắc sao lưu, migrations/ (đổi định dạng file)
-  views/      Vẽ: plan (mặt bằng), elevation (mặt đứng), scene3d, shapes/ (kiểu vẽ 3D), viewport (phóng to, kéo)
+  views/      Vẽ: plan (mặt bằng), elevation (mặt đứng), apartment (mô hình cả căn: xếp phòng, vẽ đủ đồ từng phòng, tìm phòng chứa một điểm), scene3d, shapes/ (kiểu vẽ 3D), viewport (phóng to, kéo)
               stage2d nối chuột và cảm ứng với plan/elevation. views chỉ nói chuyện với ứng dụng qua giao diện Host (host.ts).
-  ui/         Thanh công cụ, thư viện, bảng thuộc tính, hộp thoại, điện thoại. app.ts nối mọi thứ lại (App implements Host).
+  ui/         Thanh công cụ, thư viện, bảng thuộc tính, hộp thoại (xuất, nhập, dự án mới), điện thoại. app.ts nối mọi thứ lại (App implements Host).
   gallery/    Trang gallery (model.ts lọc / gom nhóm, cards.ts dựng HTML, thumb3d.ts ảnh 3D)
-  styles/     CSS theo từng khu vực; tokens.css giữ màu và font, có chế độ tối
+  styles/     CSS theo từng khu vực; tokens.css giữ màu và font. Mặc định nền sáng; nút "Chế độ tối" (ui/theme.ts)
+              đặt data-theme="dark" trên <html> và nhớ lựa chọn trong trình duyệt (khóa xepnha2d:theme)
 tools/        validate-items.ts (lệnh kiểm tra dữ liệu), report.ts (định dạng kết quả)
 tests/        Test của core, data, storage, viewport, views 2D, scene 3D
 ```
@@ -70,34 +79,39 @@ Hai hàm vẽ lại: `render()` chỉ vẽ khung bản vẽ (dùng khi đang ké
 3. Mở `/gallery.html`, xem món mới đứng cạnh món có sẵn ở cùng tỉ lệ. Món `draft` chỉ hiện ở trang này.
 4. Đổi thành `status: 'live'`. Món hiện trong thư viện, không cần sửa code.
 
+**Thêm loại cửa đi, cửa sổ mới**: thêm một dòng vào `src/data/openings.ts` (`id`, `kind: 'door' | 'win'`, `name`, `w`; cửa sổ thêm `sill` bậu và `h` cao; `color`), rồi `npm run validate:items`. Loại cửa hiện ngay trong nhóm Cửa đi hoặc Cửa sổ của thư viện. Mã không được trùng mã của món nào.
+
 **Mã món (`id`) không bao giờ đổi**: file đã lưu và file gửi cho người khác ghi mã này. Món bỏ đi thì đánh dấu `status: 'retired', replacedBy: '<mã món thay>'`, bản vẽ cũ vẫn mở được. Bản vẽ không lưu bản sao khai báo của món, nên sửa kích thước hay ghi chú trong dữ liệu sẽ áp dụng cho mọi bản vẽ.
 
 Thêm các thứ khác:
 
 - **Kiểu vẽ 3D mới**: thêm tên vào `SHAPE_IDS` (`src/data/shapes.ts`), viết hàm dựng trong `src/views/shapes/<tên>.ts`, đăng ký ở `src/views/shapes/index.ts` (chưa đăng ký thì TypeScript báo lỗi). Món lạ hoặc không ghi `shape` thì vẽ hình hộp.
 - **Nhóm mới**: `src/data/categories.ts` (đồ gắn tường thêm `label3d` để hiện tên nhóm trong 3D).
-- **Phòng mới**: thêm id vào `ROOM_IDS` và một mục trong `ROOMS` (`src/data/rooms.ts`). Tab phòng tự có; bố trí mẫu chỉ được dùng món `live`.
+- **Loại phòng mới**: thêm id vào `ROOM_TYPE_IDS` và một mục trong `ROOMS` (`src/data/rooms.ts`: cỡ, màu, cửa đi, cửa sổ, bố trí mẫu). Loại mới tự có trong nhóm **Phòng** của thư viện; bố trí mẫu chỉ được dùng món `live`. Một phòng trong căn hộ là `RoomEntry { id, type, name }`: `type` chọn khai báo gốc, `id` là khóa bản vẽ (chữ thường, số, gạch ngang, tối đa 24 ký tự), `name` do người dùng đặt. `ROOM_IDS` / `DEFAULT_ROOMS` là bốn phòng của căn hộ mới và của dữ liệu cũ.
 - **Màu gợi ý**: `src/data/palettes.ts`.
 - **Đổi định dạng file lưu**: thêm `src/storage/migrations/vN-to-vM.ts`, đăng ký trong `migrations/index.ts` và tăng `CURRENT_VER`. Không sửa migration cũ.
 
 ## Dữ liệu và file
 
-- Tự lưu trong `localStorage` của trình duyệt: khóa `xepnha2d:state` (bản vẽ cả 4 phòng, màu bút, tên và ghi chú) và `xepnha2d:backup` (ngày xuất gần nhất, nhắc sao lưu). Dữ liệu không rời khỏi máy.
-- File xuất: `{ app: 'xepnha2d', ver: 3, name, note, exportedAt, units: 'cm', scope: 'all' | 'room', rooms: { ... } }`. Chọn xuất cả 4 phòng hoặc riêng phòng đang mở. Không lưu `uid` (gán lại khi mở).
-- Nhập file: kéo thả vào trang, chọn file hoặc dán nội dung. Hộp thoại cho xem trước và chọn phòng nào được thay; việc nhập là một bước Hoàn tác cho mỗi phòng.
+- Tự lưu trong `localStorage` của trình duyệt: khóa `xepnha2d:state` (danh sách phòng `rooms`, bản vẽ từng phòng, vị trí các phòng trong căn hộ `apt`, màu bút, tên và ghi chú; dữ liệu cũ chưa có `rooms` thì đọc thành bốn phòng mặc định) và `xepnha2d:backup` (ngày xuất gần nhất, nhắc sao lưu), `xepnha2d:view` (lần xem cuối: cả căn hộ hay trong một phòng), `xepnha2d:theme` (giao diện sáng, tối). Dữ liệu không rời khỏi máy.
+- File xuất: `{ app: 'xepnha2d', ver: 4, name, note, exportedAt, units: 'cm', scope: 'all' | 'room', rooms: { ... } }`. Chọn xuất cả căn hoặc riêng phòng đang mở. Có thêm `roomList` (`[{ id, type, name }]`, thứ tự tab phòng); `rooms` dùng `id` làm khóa. File cũ không có `roomList` thì khóa trong `rooms` là mã loại phòng (ngu, khach, bep, wc). Không lưu `uid` (gán lại khi mở). Xuất cả căn có thêm `apartment` (`{ <mã phòng>: { x, y } }`, góc trên trái của phòng trong mô hình căn hộ, cm; chỉ ghi khi đã chỉnh bố cục). Mỗi phòng ghi thêm `doors` và `windows` (`{ wall, pos, w }`, `pos` là khoảng cách từ góc tới mép cửa); cửa đi có thể thêm `hinge: 'end'` (bản lề ở đầu xa góc) và `swing: 'out'` (cánh mở ra ngoài), không ghi thì là mặc định (bản lề gần góc, mở vào trong). File bản 3 trở về trước không có `doors`, `windows` thì dùng cửa mặc định của phòng.
+- Nhập file: kéo thả vào trang, chọn file hoặc dán nội dung. Hộp thoại cho xem trước và chọn phòng nào được nhập; phòng có mã trùng thì thay bản vẽ (một bước Hoàn tác của phòng đó), phòng chưa có trong căn hộ thì được thêm vào (đúng chỗ file ghi trong `apartment`, không thì chỗ trống gần nhất; quá 12 phòng thì bỏ bớt và báo). Nhập là gộp, không xóa phòng nào đang có.
 - Mọi bản vẽ đi vào ứng dụng, từ file lẫn từ `localStorage`, đều qua `sanitizeRoom` / `sanitizeSaved`: màu về dạng `#rrggbb`, số đo kẹp vào khoảng cho phép, món lạ được giữ lại dưới dạng "món tự tạo" thay vì mất.
-- Giới hạn (`src/core/limits.ts`): file 2 MB, 500 món mỗi phòng, phòng rộng / dọc 150–1500 cm, trần 220–450 cm, món 10–600 cm, độ cao mép dưới 0–400 cm, Hoàn tác 100 bước mỗi phòng.
+- Giới hạn (`src/core/limits.ts`): file 2 MB, 500 món mỗi phòng, 12 phòng mỗi căn hộ, phòng rộng / dọc 150–1500 cm, trần 220–450 cm, món 10–600 cm, độ cao mép dưới 0–400 cm, Hoàn tác 100 bước mỗi phòng.
 
 ## Phím tắt và thao tác
 
 | Thao tác | Phím / chuột |
 | --- | --- |
 | Hoàn tác, làm lại | `Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z` hoặc `Ctrl/Cmd+Y` |
-| Xóa món đang chọn | `Delete`, `Backspace` |
+| Xóa món đang chọn (ở mô hình cả căn hộ, không chọn món nào mà đang bật Chỉnh bố cục và chọn một phòng: xóa phòng đó, Hoàn tác lấy lại) | `Delete`, `Backspace` |
 | Xoay món sàn | `R` (+90°), `Shift+R` (−90°) |
+| Xoay hướng mở cánh cửa đi | `R` (một nấc theo chiều kim đồng hồ), `Shift+R` (ngược lại); hoặc nút "Đổi bên bản lề" và "Mở ra ngoài" ở bảng bên phải |
 | Dịch món | Phím mũi tên 5 cm, `Shift+mũi tên` 25 cm (mặt đứng: mũi tên lên là nâng món lên) |
+| Thêm cửa đi, cửa sổ | Mở nhóm **Cửa đi** hoặc **Cửa sổ** trong thư viện: bấm thì cửa tự vào chỗ trống (ưu tiên tường đang xem), kéo thả thì vào đúng chỗ thả (mặt bằng: tường gần nhất). Tối đa 12 cửa đi và 12 cửa sổ mỗi phòng |
+| Dời, xóa cửa đi, cửa sổ | Bấm vào cửa (khe trên tường, hoặc ở mặt bằng là cả hình cánh cửa: cánh, cung, vùng quét; đồ nội thất đè lên thì ưu tiên món) rồi kéo dọc tường; bấm chỗ trống để bỏ chọn; trên mặt bằng kéo sang tường khác thì cửa chuyển tường. Hoặc dùng bảng bên phải (chọn tường, gõ vị trí và độ rộng, nút Xóa), hoặc mũi tên dọc theo tường; `Delete` để xóa |
 | Bỏ chọn món | Bấm vào chỗ trống |
-| Thoát toàn màn hình 3D, đóng thư viện (điện thoại), tắt bút màu | `Esc` |
+| Thoát toàn màn hình, đóng thư viện (điện thoại), tắt bút màu | `Esc` |
 | Phóng to bản vẽ | `Ctrl/Cmd` + cuộn chuột, nút `+` `−` `Vừa khung`, chụm hai ngón; kéo chỗ trống để dịch bản vẽ |
 | 3D | Kéo nền để xoay, cuộn hoặc chụm để phóng to, mũi tên xoay camera, `R` và `Delete` vẫn dùng cho món đang chọn |
 
@@ -113,12 +127,12 @@ Các điểm này nên cập nhật lại trong trang design:
 
 ## Test
 
-`npm test` chạy 142 test cho `core`, `data` (cả kiểm tra dữ liệu đồ và bố trí mẫu), `storage` (lưu, file, migrations, Hoàn tác, nhắc sao lưu), `viewport`, `views` 2D và `scene3d`. Trình duyệt thật đã được thử thủ công bằng Playwright (kéo thả, phím tắt, khóa, xuất / nhập, 3D, giao diện điện thoại).
+`npm test` chạy 391 test cho `core` (cả thêm, xóa, dời cửa đi, cửa sổ và hướng mở cánh), `data` (cả kiểm tra dữ liệu đồ, các loại cửa và bố trí mẫu), `storage` (lưu, file, migrations, Hoàn tác, nhắc sao lưu, cửa trong file), `viewport` (vùng nhìn, phóng to, kéo, bay vùng nhìn khi zoom), `apartment` (mô hình cả căn: xếp phòng, dời, đổi cỡ, chỗ đặt phòng mới, không chồng nhau), `rooms` (loại phòng, mã phòng, phòng mới), `project` (số phòng mỗi loại, dựng dự án mới), `ui/newProject` (hộp thoại Dự án mới), `views` 2D, `scene3d`, `ui/theme` (đổi giao diện sáng, tối), `ui/keys` (phím tắt), `ui/library` (thư viện đồ dạng chọn nhóm), `ui/pen` (bút màu) và `ui/fullscreen` (toàn màn hình). Trình duyệt thật đã được thử thủ công bằng Playwright (kéo thả, phím tắt, khóa, xuất / nhập, 3D, giao diện điện thoại).
 
-**Chưa có test** cho: `core/ops.ts`, các module `ui/` (keys, library, nav, remind, pen, hộp thoại xuất / nhập, `App`), `gallery/` và `tools/report.ts`. Nên bổ sung khi sửa các phần đó; chúng đều viết dạng hàm thuần hoặc có giao diện hẹp nên dễ kiểm thử.
+**Chưa có test** cho: các hàm sửa món trong `core/ops.ts` (thêm, xoay, dịch, đổi số đo, khóa; riêng phần cửa đã có test), các module `ui/` (nav, remind, bảng thuộc tính, hộp thoại xuất / nhập, `App`), kéo cửa bằng chuột trong `views/stage2d.ts` (đã thử thủ công trên trình duyệt thật; các hàm tính vị trí kéo thì có test), `gallery/` và `tools/report.ts`. Nên bổ sung khi sửa các phần đó; chúng đều viết dạng hàm thuần hoặc có giao diện hẹp nên dễ kiểm thử.
 
 ## Chưa làm (giai đoạn sau)
 
-- Giai đoạn 2: cửa đi / cửa sổ kéo thả được, phòng hình chữ L, đo khoảng cách giữa 2 điểm, xuất ảnh PNG, tự tạo món mới, cột và hộp kỹ thuật cố định.
+- Giai đoạn 2: đổi bậu và chiều cao cửa sổ ngay trong bảng thuộc tính (hiện chỉ chọn theo loại trong thư viện), cửa đôi và cửa trượt, phòng hình chữ L, đo khoảng cách giữa 2 điểm, xuất ảnh PNG, tự tạo món mới, cột và hộp kỹ thuật cố định.
 - Giai đoạn 3: ảnh mặt bằng chủ đầu tư làm nền, món nhiều phần mỗi phần một màu, danh sách đồ cần mua kèm giá, xuất PDF, chọn nhiều món cùng lúc.
 # mixnha

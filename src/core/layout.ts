@@ -2,12 +2,13 @@ import type { ItemDef, RoomDef, WallKey } from '../data/schema';
 import { FLOOR_COLORS, WALL_COLORS } from '../data/palettes';
 import { WALL_KEYS } from '../data/walls';
 import type { RoomId } from '../data/rooms';
-import { ROOM_IDS } from '../data/rooms';
 import { normHex } from './color';
 import { clamp } from './geometry';
 import { LIMITS, ROOM_DIM_LIMITS, type RoomDimKey } from './limits';
 import type { Registry } from './registry';
-import type { AnyItem, FloorItem, Layout, Layouts, Scope, Selection, WallItem } from './types';
+import { fitOpening } from './room';
+import { isRoomIdString } from './rooms';
+import type { AnyItem, DoorItem, FloorItem, Layout, Layouts, OpeningSel, Scope, Selection, WallItem, WindowItem } from './types';
 
 /** Chiều cao dùng khi món không có trong thư viện và file cũng không ghi. */
 export const DEFAULT_FLOOR_HEIGHT = 50;
@@ -49,6 +50,8 @@ export function freshLayout(room: RoomDef, reg: Registry, nextUid: NextUid): Lay
     wall: lower(WALL_COLORS[0]!.hex),
     items,
     walls,
+    doors: room.doors.map((d) => ({ ...d, uid: nextUid() })),
+    windows: room.windows.map((d) => ({ ...d, uid: nextUid() })),
   };
 }
 
@@ -67,20 +70,28 @@ export function findItem(layout: Layout, sel: Selection | null): AnyItem | undef
   return listOf(layout, sel.scope).find((i) => i.uid === sel.uid);
 }
 
+/** Cửa đi hoặc cửa sổ đang chọn, nếu còn trong bản vẽ. */
+export function findOpening(layout: Layout, sel: OpeningSel | null): DoorItem | WindowItem | undefined {
+  if (!sel) return undefined;
+  return (sel.kind === 'door' ? layout.doors : layout.windows).find((o) => o.uid === sel.uid);
+}
+
 export function maxUid(layouts: Partial<Layouts>): number {
   let m = 0;
   for (const l of Object.values(layouts)) {
     if (!l) continue;
     for (const i of l.items) m = Math.max(m, i.uid);
     for (const w of WALL_KEYS) for (const i of l.walls[w]) m = Math.max(m, i.uid);
+    for (const o of [...l.doors, ...l.windows]) m = Math.max(m, o.uid);
   }
   return m;
 }
 
-/** Gán mã uid mới cho mọi món của một phòng (khi đọc từ bộ nhớ hoặc từ file, nơi món chưa có mã). */
+/** Gán mã uid mới cho mọi món, cửa đi và cửa sổ của một phòng (khi đọc từ bộ nhớ hoặc từ file, nơi chúng chưa có mã). */
 export function assignUids(l: Layout, nextUid: NextUid): void {
   for (const i of l.items) i.uid = nextUid();
   for (const w of WALL_KEYS) for (const i of l.walls[w]) i.uid = nextUid();
+  for (const o of [...l.doors, ...l.windows]) o.uid = nextUid();
 }
 
 export function countItems(l: Layout): number {
@@ -123,7 +134,7 @@ export function cloneLayout(l: Layout): Layout {
 }
 
 export function isRoomId(v: unknown): v is RoomId {
-  return typeof v === 'string' && (ROOM_IDS as readonly string[]).includes(v);
+  return isRoomIdString(v);
 }
 
 /* ---------- Khóa món ---------- */
@@ -145,7 +156,7 @@ export function snapValue(v: number, on: boolean): number {
   return on ? Math.round(v / LIMITS.grid) * LIMITS.grid : Math.round(v);
 }
 
-/** Đổi kích thước phòng. Giá trị kẹp trong khoảng cho phép, món nằm ngoài phòng mới thì kéo vào mép. Trả về giá trị thực tế đã dùng. */
+/** Đổi kích thước phòng. Giá trị kẹp trong khoảng cho phép, món và cửa nằm ngoài phòng mới thì kéo vào mép. Trả về giá trị thực tế đã dùng. */
 export function setRoomDim(l: Layout, key: RoomDimKey, v: number): number {
   const { min, max } = ROOM_DIM_LIMITS[key];
   const val = clamp(Math.round(v), min, max);
@@ -154,6 +165,7 @@ export function setRoomDim(l: Layout, key: RoomDimKey, v: number): number {
     i.x = Math.min(i.x, l.W);
     i.y = Math.min(i.y, l.H);
   }
+  for (const o of [...l.doors, ...l.windows]) Object.assign(o, fitOpening(o, l.W, l.H));
   return val;
 }
 

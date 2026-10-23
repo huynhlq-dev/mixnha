@@ -1,18 +1,18 @@
-import { analyseWall } from '../core/analyse';
+import { analyseWall, openingKey, overlappingOpenings } from '../core/analyse';
 import { textOn } from '../core/color';
 import { escapeHtml, fm } from '../core/format';
-import { boxOf, clamp, planToWall, wallLength, wallRect } from '../core/geometry';
+import { boxOf, clamp, planToWall, posFromRange, wallLength, wallRect, type RoomSize } from '../core/geometry';
 import { floorHeight } from '../core/layout';
 import { LIMITS } from '../core/limits';
 import { wallGaps } from '../core/measure';
 import type { Registry } from '../core/registry';
 import type { RoomGeo } from '../core/room';
-import type { Layout, Selection } from '../core/types';
+import type { Layout, OpeningSel, Selection } from '../core/types';
 import { WALL_NAMES } from '../data/walls';
-import type { WallKey } from '../data/schema';
+import type { OpeningDef, WallKey } from '../data/schema';
 import { MARGIN, type Frame } from './frame';
 import type { Grab } from './plan';
-import { gridLines, hdim, lockGlyph, n2, pickLabel, vdim } from './svg';
+import { edgeTag, gridLines, hdim, lockGlyph, n2, openingLabel, openingOpen, pickLabel, vdim } from './svg';
 
 export interface ElevationInput {
   layout: Layout;
@@ -20,7 +20,11 @@ export interface ElevationInput {
   reg: Registry;
   wall: WallKey;
   sel: Selection | null;
+  /** Cửa đi hoặc cửa sổ đang chọn. */
+  opening?: OpeningSel | null;
   dim: boolean;
+  /** Kích thước chi tiết của món đang chọn, nhãn nằm ngay trên từng cạnh. */
+  detail?: boolean;
 }
 
 const INK = '#15211E';
@@ -53,16 +57,20 @@ export function renderElevation(i: ElevationInput): Frame {
     o.push(`<text x="4" y="${Y(g.y) - 3}" font-size="8" font-family="JetBrains Mono,monospace" style="fill:${INK};opacity:.7">${escapeHtml(g.label)}</text>`);
   }
 
+  // cửa đi, cửa sổ: chồng lên nhau thì viền cam, đang chọn thì viền xanh
+  const overlap = overlappingOpenings(R);
   for (const p of info.openings) {
     const w = p.x1 - p.x0;
     const h = p.y1 - p.y0;
-    if (p.kind === 'win') {
-      o.push(`<rect x="${p.x0}" y="${Y(p.y1)}" width="${w}" height="${h}" style="fill:#BFD7E3;stroke:${INK};stroke-width:1.4"/>`);
-      o.push(`<path d="M${p.x0 + w / 2} ${Y(p.y1)}V${Y(p.y0)}" style="stroke:${INK};stroke-width:1"/>`);
-    } else {
-      o.push(`<rect x="${p.x0}" y="${Y(p.y1)}" width="${w}" height="${h}" style="fill:#C9A27E;stroke:${INK};stroke-width:1.4"/>`);
-      o.push(`<circle cx="${p.x1 - 8}" cy="${Y(100)}" r="3" style="fill:${INK}"/>`);
-    }
+    const bad = overlap.has(openingKey(p));
+    const picked = i.opening?.kind === p.kind && i.opening.uid === p.uid;
+    const col = bad ? 'var(--warn)' : picked ? ACCENT : INK;
+    const sw = bad || picked ? 3 : 1.4;
+    const inner =
+      p.kind === 'win'
+        ? `<rect x="${p.x0}" y="${Y(p.y1)}" width="${w}" height="${h}" style="fill:#BFD7E3;stroke:${col};stroke-width:${sw}"/>` + `<path d="M${p.x0 + w / 2} ${Y(p.y1)}V${Y(p.y0)}" style="stroke:${col};stroke-width:1"/>`
+        : `<rect x="${p.x0}" y="${Y(p.y1)}" width="${w}" height="${h}" style="fill:#C9A27E;stroke:${col};stroke-width:${sw}"/>` + `<circle cx="${p.handle === 'left' ? p.x0 + 8 : p.x1 - 8}" cy="${Y(100)}" r="3" style="fill:${INK}"/>`;
+    o.push(openingOpen(p.kind, p.uid, openingLabel(p.kind, { wall: wl, w })) + inner + `</g>`);
   }
 
   // đồ đứng sàn gần tường: hiện mờ để biết đồ gắn tường có vướng không
@@ -109,18 +117,35 @@ export function renderElevation(i: ElevationInput): Frame {
   o.push(hdim(0, len, -30, `${len} cm`, 'var(--muted)'));
   o.push(vdim(0, C, -30, `${C} cm`, 'var(--muted)', -1));
 
+  const op = i.opening ? info.openings.find((p) => p.kind === i.opening!.kind && p.uid === i.opening!.uid) : undefined;
+  if (op && dim) {
+    o.push(hdim(op.x0, op.x1, Y(op.y1) - 10, `${fm(op.x1 - op.x0)} cm`, ACCENT));
+    o.push(wallDistances(op, len, C, Y));
+  }
+
   const sel = selUid === null ? undefined : list.find((x) => x.uid === selUid);
   if (sel && dim) {
     const q = wallRect(sel);
-    o.push(hdim(q.x0, q.x1, Y(q.y1) - 10, `${fm(sel.w)} cm`, ACCENT));
-    o.push(vdim(Y(q.y1), Y(q.y0), q.x1 + 12, `${fm(sel.h)} cm`, ACCENT, 1));
+    // nhãn trên cạnh (nếu bật) đã ghi rộng, cao, nên không vẽ thêm hai đường kích thước tách rời
+    if (!i.detail) {
+      o.push(hdim(q.x0, q.x1, Y(q.y1) - 10, `${fm(sel.w)} cm`, ACCENT));
+      o.push(vdim(Y(q.y1), Y(q.y0), q.x1 + 12, `${fm(sel.h)} cm`, ACCENT, 1));
+    }
     o.push(wallDistances(q, len, C, Y));
+  }
+  if (sel && i.detail) {
+    // chỉ số, nằm giữa cạnh tương ứng: rộng ở cạnh dưới, cao ở cạnh phải; chữ co theo độ dài cạnh
+    const q = wallRect(sel);
+    o.push(edgeTag(sel.x, Y(q.y0), 0, fm(sel.w), 'w', sel.w));
+    o.push(edgeTag(q.x1, Y((q.y0 + q.y1) / 2), 90, fm(sel.h), 'h', sel.h));
   }
 
   const nbad = info.bad.size;
   const name = WALL_NAMES[wl];
   const frameStatus: Frame['status'] =
-    nbad > 0
+    overlap.size > 0
+      ? { tone: 'bad', text: 'Cửa đi hoặc cửa sổ đang chồng lên nhau (viền cam), hãy dời ra xa nhau.' }
+      : nbad > 0
       ? { tone: 'bad', text: `${nbad} món chồng lấn, vượt ra ngoài tường hoặc đè lên cửa, cửa sổ.` }
       : {
           tone: 'good',
@@ -167,4 +192,14 @@ export function dragWall(it: { w: number; h: number }, p: { x: number; y: number
     ey = Math.round(ey / LIMITS.grid) * LIMITS.grid;
   }
   return { x: clamp(ex, 0, size.len), y: clamp(ey, 0, Math.max(0, size.ceil - it.h)) };
+}
+
+/** Chỗ nắm cửa trên mặt đứng: mép trái của cửa (x0) cách con trỏ bao nhiêu cm dọc theo tường. */
+export function grabOpeningWall(x0: number, p: { x: number }): number {
+  return x0 - p.x;
+}
+
+/** pos mới của cửa khi kéo tới con trỏ p trên mặt đứng của tường chứa nó. Bám lưới và kẹp vào tường do moveOpening lo. */
+export function dragOpeningWall(R: RoomSize, d: Pick<OpeningDef, 'wall' | 'w'>, p: { x: number }, grab: number): number {
+  return posFromRange(R, d.wall, d.w, p.x + grab);
 }

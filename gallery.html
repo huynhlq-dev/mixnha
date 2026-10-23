@@ -3,10 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="light dark" />
+    <meta name="color-scheme" content="light" />
     <meta name="robots" content="noindex" />
     <title>Thư viện đồ · %VITE_APP_NAME%</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      // đặt giao diện đã chọn trước khi vẽ trang để không nháy sáng; cùng khóa với src/ui/theme.ts
+      try {
+        document.documentElement.dataset.theme = localStorage.getItem('xepnha2d:theme') === 'dark' ? 'dark' : 'light';
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div class="wrap">
@@ -15,7 +21,10 @@
           <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="2" y="2" width="22" height="22" rx="3" fill="none" stroke="currentColor" stroke-width="2" /><path d="M2 14h10v10M16 2v8h8" fill="none" stroke="currentColor" stroke-width="2" /><rect x="5" y="17" width="5" height="4" style="fill: var(--accent)" /></svg>
           <span>Thư viện đồ</span>
         </h1>
-        <a class="btn" href="./index.html">Về trình thiết kế</a>
+        <div class="topbtns">
+          <a class="btn" href="./index.html">Về trình thiết kế</a>
+          <button class="btn" id="btnTheme" type="button" aria-pressed="false" title="Đổi giao diện sáng, tối"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.6 9.8A5.8 5.8 0 0 1 6.2 2.4a5.8 5.8 0 1 0 7.4 7.4Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg>Chế độ tối</button>
+        </div>
       </header>
 
       <section class="gtools" aria-label="Bộ lọc">

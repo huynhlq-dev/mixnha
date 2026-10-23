@@ -6,8 +6,10 @@ import '../styles/gallery.css';
 
 import { registry } from '../core/registry';
 import { validateData } from '../core/validate';
-import { ROOM_IDS, ROOMS } from '../data/rooms';
+import { ROOM_TYPE_IDS, ROOMS } from '../data/rooms';
 import { SHAPE_IDS } from '../data/shapes';
+import { browserKV } from '../storage/kv';
+import { bindThemeToggle } from '../ui/theme';
 import { groupsHtml, issuesHtml, rulerHtml, SCALE, type CardContext } from './cards';
 import { ALL_FILTER, galleryGroups, issuesById, summaryText, type GalleryFilter, type PlaceFilter, type StatusFilter } from './model';
 import { createThumbs, type Thumbs } from './thumb3d';
@@ -49,7 +51,7 @@ class Gallery {
   private readonly issues = validateData(
     registry.items,
     registry.categories,
-    ROOM_IDS.map((id) => ROOMS[id]),
+    ROOM_TYPE_IDS.map((id) => ROOMS[id]),
     SHAPE_IDS,
   );
   private readonly byItem = issuesById(this.issues, this.items);
@@ -164,4 +166,5 @@ class Gallery {
   }
 }
 
+bindThemeToggle(must('btnTheme', HTMLButtonElement), browserKV());
 new Gallery().start();

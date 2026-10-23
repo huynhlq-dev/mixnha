@@ -22,6 +22,7 @@ export class History {
   private lastAt = 0;
   private lastContinuous = false;
   private lastRoom: RoomId | null = null;
+  private pushed = false;
   private readonly limit: number;
   private readonly mergeMs: number;
   private readonly now: () => number;
@@ -53,6 +54,7 @@ export class History {
     if (snap === h.cur) return false;
     const t = this.now();
     const merge = continuous && this.lastContinuous && this.lastRoom === room && t - this.lastAt < this.mergeMs && h.undo.length > 0;
+    this.pushed = !merge;
     if (!merge) {
       h.undo.push(h.cur);
       if (h.undo.length > this.limit) h.undo.shift();
@@ -63,6 +65,26 @@ export class History {
     this.lastContinuous = continuous;
     this.lastRoom = room;
     return true;
+  }
+
+  /** Lần commit vừa rồi (đã ghi) có thêm một bước mới, hay chỉ gộp vào bước trước (thao tác liên tục). */
+  get lastWasNewStep(): boolean {
+    return this.pushed;
+  }
+
+  /** Thêm một phòng mới (hoặc phòng vừa lấy lại): lịch sử riêng, lấy bố trí này làm điểm xuất phát. */
+  add(room: RoomId, layout: Layout): void {
+    this.rooms.set(room, { undo: [], redo: [], cur: JSON.stringify(layout) });
+    if (this.lastRoom === room) this.lastContinuous = false;
+  }
+
+  /** Bỏ lịch sử của một phòng đã xóa. */
+  remove(room: RoomId): void {
+    this.rooms.delete(room);
+    if (this.lastRoom === room) {
+      this.lastRoom = null;
+      this.lastContinuous = false;
+    }
   }
 
   canUndo(room: RoomId): boolean {

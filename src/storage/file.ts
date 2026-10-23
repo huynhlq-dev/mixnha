@@ -2,12 +2,13 @@ import { plain } from '../core/format';
 import { assignUids, countItems, type NextUid } from '../core/layout';
 import { LIMITS } from '../core/limits';
 import type { Registry } from '../core/registry';
-import type { FloorItem, Layout, Layouts, WallItem } from '../core/types';
-import { ROOM_IDS, type RoomId } from '../data/rooms';
+import type { AptPlan, DoorItem, FloorItem, Layout, Layouts, WallItem, WindowItem } from '../core/types';
+import { isRoomTypeId, roomDef } from '../core/rooms';
+import { DEFAULT_ROOMS, ROOM_TYPE_IDS, ROOMS, type RoomEntry, type RoomId } from '../data/rooms';
 import type { WallKey } from '../data/schema';
 import { WALL_KEYS } from '../data/walls';
 import { CURRENT_VER, migrate, type RawDoc } from './migrations';
-import { cleanText, FIELD_LIMITS, sanitizeRoom, Tally, type ImportWarning } from './sanitize';
+import { cleanText, FIELD_LIMITS, sanitizeApt, sanitizeRoom, sanitizeRoomList, Tally, type ImportWarning } from './sanitize';
 
 export { cleanText } from './sanitize';
 export type { ImportWarning, WarningCode } from './sanitize';
@@ -35,6 +36,9 @@ export interface FileRoom {
   wall: string;
   items: NoUid<FloorItem>[];
   walls: Record<WallKey, NoUid<WallItem>[]>;
+  /** pos là khoảng cách từ góc tới mép cửa (cm); mặt bằng: tường trên, dưới tính từ góc trái, tường trái, phải tính từ góc trên. */
+  doors: NoUid<DoorItem>[];
+  windows: NoUid<WindowItem>[];
 }
 
 export interface DesignFile {
@@ -46,6 +50,10 @@ export interface DesignFile {
   units: 'cm';
   scope: ExportScope;
   rooms: Partial<Record<RoomId, FileRoom>>;
+  /** Vị trí các phòng trong mô hình căn hộ (góc trên trái, cm). Chỉ ghi khi xuất cả căn và đã chỉnh bố cục. */
+  apartment?: AptPlan;
+  /** Các phòng trong file theo thứ tự tab: mã, loại và tên. File cũ (trước khi phòng thêm, xóa được) không có: mã phòng là mã loại. */
+  roomList?: RoomEntry[];
 }
 
 /* ---------- Xuất ---------- */
@@ -57,6 +65,10 @@ export interface ExportOptions {
   name?: string;
   note?: string;
   now: Date;
+  /** Vị trí các phòng trong mô hình căn hộ; có thì ghi vào file khi xuất cả căn. */
+  apt?: AptPlan;
+  /** Các phòng của căn hộ theo thứ tự tab. Không ghi thì là bốn phòng mặc định. */
+  rooms?: readonly RoomEntry[];
 }
 
 const r1 = (v: number): number => Math.round(v * 10) / 10;
@@ -78,7 +90,17 @@ function roundItem<T extends { x: number; y: number; w: number }>(it: T): T {
 export function toFileRoom(l: Layout): FileRoom {
   const walls = { T: [], R: [], B: [], L: [] } as FileRoom['walls'];
   for (const w of WALL_KEYS) walls[w] = l.walls[w].map((i) => roundItem(stripUid(i)));
-  return { W: l.W, H: l.H, ceil: l.ceil, floor: l.floor, wall: l.wall, items: l.items.map((i) => roundItem(stripUid(i))), walls };
+  return {
+    W: l.W,
+    H: l.H,
+    ceil: l.ceil,
+    floor: l.floor,
+    wall: l.wall,
+    items: l.items.map((i) => roundItem(stripUid(i))),
+    walls,
+    doors: l.doors.map(stripUid),
+    windows: l.windows.map(stripUid),
+  };
 }
 
 /** Ngày giờ theo múi giờ máy, dạng 2026-10-20T10:05:00+07:00. */
@@ -92,8 +114,9 @@ export function isoLocal(d: Date): string {
 
 export function buildFile(layouts: Layouts, o: ExportOptions): DesignFile {
   const rooms: DesignFile['rooms'] = {};
-  const ids: readonly RoomId[] = o.scope === 'all' ? ROOM_IDS : [o.room];
-  for (const id of ids) rooms[id] = toFileRoom(layouts[id]);
+  const all = o.rooms ?? DEFAULT_ROOMS;
+  const entries = o.scope === 'all' ? all : all.filter((r) => r.id === o.room);
+  for (const e of entries) rooms[e.id] = toFileRoom(layouts[e.id]!);
   const name = cleanText(o.name, FILE_LIMITS.maxName);
   const note = cleanText(o.note, FILE_LIMITS.maxNote);
   return {
@@ -105,6 +128,8 @@ export function buildFile(layouts: Layouts, o: ExportOptions): DesignFile {
     units: 'cm',
     scope: o.scope,
     rooms,
+    roomList: entries.map((e) => ({ id: e.id, type: e.type, name: e.name })),
+    ...(o.scope === 'all' && o.apt && Object.keys(o.apt).length ? { apartment: o.apt } : {}),
   };
 }
 
@@ -128,10 +153,10 @@ export function makeFilename(name: string | undefined, now: Date): string {
 }
 
 /** Số phòng và số món sẽ nằm trong file, để hiện trong hộp thoại xuất. */
-export function summarizeExport(layouts: Layouts, scope: ExportScope, room: RoomId): { rooms: number; items: number } {
-  const ids: readonly RoomId[] = scope === 'all' ? ROOM_IDS : [room];
+export function summarizeExport(layouts: Layouts, scope: ExportScope, room: RoomId, rooms: readonly RoomEntry[] = DEFAULT_ROOMS): { rooms: number; items: number } {
+  const ids: readonly RoomId[] = scope === 'all' ? rooms.map((r) => r.id) : [room];
   let items = 0;
-  for (const id of ids) items += countItems(layouts[id]);
+  for (const id of ids) items += countItems(layouts[id]!);
   return { rooms: ids.length, items };
 }
 
@@ -139,6 +164,8 @@ export function summarizeExport(layouts: Layouts, scope: ExportScope, room: Room
 
 export interface ImportedRoom {
   id: RoomId;
+  /** Mã, loại và tên của phòng như trong file. */
+  entry: RoomEntry;
   /** Bố trí đã kiểm tra. uid của mọi món là 0, gán mã thật bằng layoutFromImported khi áp dụng. */
   layout: Layout;
   itemCount: number;
@@ -151,6 +178,8 @@ export interface ParsedFile {
   scope: ExportScope;
   rooms: ImportedRoom[];
   warnings: ImportWarning[];
+  /** Vị trí các phòng trong mô hình căn hộ ghi trong file (đã làm sạch); rỗng nếu file không có. */
+  apt: AptPlan;
 }
 
 export type ImportErrorCode = 'too-large' | 'not-json' | 'invalid' | 'newer' | 'too-many';
@@ -203,22 +232,31 @@ export function parseDesignFile(text: string, reg: Registry): ParseResult {
   const roomsRaw = doc.rooms as Record<string, unknown>;
   const tally = new Tally();
   const rooms: ImportedRoom[] = [];
+  const listed = sanitizeRoomList(doc.roomList);
+  const byId = new Map((listed ?? []).map((e) => [e.id, e]));
   for (const [key, value] of Object.entries(roomsRaw)) {
-    if (!(ROOM_IDS as readonly string[]).includes(key)) {
+    // file cũ không có roomList: khóa là mã loại phòng, cũng là mã phòng
+    const entry = byId.get(key) ?? (isRoomTypeId(key) ? { id: key, type: key, name: ROOMS[key].name } : undefined);
+    if (!entry) {
       tally.add('unknown-room');
       continue;
     }
-    const res = sanitizeRoom(value, key as RoomId, reg, tally);
+    const res = sanitizeRoom(value, roomDef(entry), reg, tally);
     if (!res.ok) {
       if (res.code === 'too-many') {
         return failure('too-many', 'File có quá nhiều món', `Một phòng trong file có nhiều hơn ${LIMITS.maxItemsPerRoom} món. Trang không nhập file này để tránh bị chậm.`, res.detail);
       }
       return bad(res.detail);
     }
-    rooms.push({ id: key as RoomId, layout: res.layout, itemCount: countItems(res.layout) });
+    rooms.push({ id: entry.id, entry, layout: res.layout, itemCount: countItems(res.layout) });
   }
   if (!rooms.length) return bad('không có phòng nào dùng được trong "rooms"');
-  rooms.sort((a, b) => ROOM_IDS.indexOf(a.id) - ROOM_IDS.indexOf(b.id));
+  // thứ tự như trong roomList; file cũ thì theo thứ tự loại phòng
+  const order = (id: RoomId): number => {
+    const i = listed ? listed.findIndex((e) => e.id === id) : ROOM_TYPE_IDS.indexOf(id as never);
+    return i < 0 ? ROOM_TYPE_IDS.length + (listed?.length ?? 0) : i;
+  };
+  rooms.sort((a, b) => order(a.id) - order(b.id));
 
   return {
     ok: true,
@@ -229,6 +267,10 @@ export function parseDesignFile(text: string, reg: Registry): ParseResult {
       scope: doc.scope === 'room' ? 'room' : 'all',
       rooms,
       warnings: tally.list(),
+      apt: sanitizeApt(
+        doc.apartment,
+        rooms.map((r) => r.id),
+      ),
     },
   };
 }

@@ -3,6 +3,7 @@ import { fm } from '../core/format';
 import type { Registry } from '../core/registry';
 import type { RoomGeo } from '../core/room';
 import type { Layout } from '../core/types';
+import type { AptRoom } from './apartment';
 import type { Frame } from './frame';
 
 export type Info3D = Pick<Frame, 'title' | 'size' | 'area' | 'status'>;
@@ -19,4 +20,13 @@ export function describe3D(layout: Layout, R: RoomGeo, reg: Registry, failed: bo
     status = { tone: 'good', text: 'Bấm vào món để chọn, kéo món để di chuyển, kéo vào chỗ trống để xoay 360°. Kéo món từ thư viện thả thẳng vào phòng.' };
   }
   return { title: `${R.name} · 3D`, size: `${R.W} × ${R.H} × ${R.ceil} cm`, area: `${fm((R.W * R.H) / 10000)} m²`, status };
+}
+
+/** Dòng tiêu đề và trạng thái của kiểu xem 3D cả căn hộ (chỉ để xem). */
+export function describeApartment3D(rooms: readonly AptRoom[], failed: boolean): Info3D {
+  const area = rooms.reduce((a, r) => a + (r.geo.W * r.geo.H) / 10000, 0);
+  const status: Frame['status'] = failed
+    ? { tone: 'good', text: 'Chưa dựng được 3D trên trình duyệt này. Mặt bằng cả căn hộ vẫn dùng bình thường.' }
+    : { tone: 'good', text: 'Kéo để xoay 360°, cuộn hoặc chụm hai ngón để phóng to. 3D cả căn hộ chỉ để xem: muốn sửa đồ thì quay về Mặt bằng, hoặc zoom vào một phòng.' };
+  return { title: 'Cả căn hộ · 3D', size: `${rooms.length} phòng`, area: `${fm(area)} m²`, status };
 }

@@ -7,6 +7,47 @@ export interface Bounds {
   h: number;
 }
 
+/**
+ * Số đơn vị bản vẽ ứng với một pixel màn hình, khi vùng nhìn view được đặt vừa vào khung rộng boxW, cao boxH (px).
+ * SVG co vùng nhìn cho lọt khung theo chiều chật hơn, nên lấy hệ số lớn hơn của hai chiều.
+ */
+export function unitsPerPixel(view: Bounds, boxW: number, boxH: number): number {
+  if (boxW <= 0 || boxH <= 0) return 1;
+  return Math.max(view.w / boxW, view.h / boxH);
+}
+
+/** Chuỗi viewBox của SVG, làm tròn 2 chữ số thập phân. */
+export function viewToString(v: Bounds): string {
+  const r = (n: number) => Math.round(n * 100) / 100;
+  return `${r(v.x)} ${r(v.y)} ${r(v.w)} ${r(v.h)}`;
+}
+
+/** Đọc lại chuỗi viewBox "x y w h"; sai dạng hoặc kích thước không dương thì null. */
+export function parseView(s: string | null): Bounds | null {
+  const p = (s ?? '').trim().split(/[\s,]+/).map(Number);
+  if (p.length !== 4 || p.some((n) => !Number.isFinite(n)) || p[2]! <= 0 || p[3]! <= 0) return null;
+  return { x: p[0]!, y: p[1]!, w: p[2]!, h: p[3]! };
+}
+
+/** Làm chậm ở hai đầu, nhanh ở giữa. t trong khoảng 0 đến 1. */
+export function easeInOut(t: number): number {
+  const k = clamp(t, 0, 1);
+  return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+}
+
+/**
+ * Vùng nhìn ở thời điểm t (0 đến 1) khi bay từ a tới b: tâm đi thẳng, còn cỡ vùng nhìn đổi theo cấp số nhân
+ * để zoom vào hoặc ra đều tay (đổi tuyến tính sẽ thấy lúc đầu chậm, lúc cuối đột ngột).
+ */
+export function lerpView(a: Bounds, b: Bounds, t: number): Bounds {
+  const k = clamp(t, 0, 1);
+  const w = a.w * Math.pow(b.w / a.w, k);
+  const h = a.h * Math.pow(b.h / a.h, k);
+  const cx = a.x + a.w / 2 + (b.x + b.w / 2 - (a.x + a.w / 2)) * k;
+  const cy = a.y + a.h / 2 + (b.y + b.h / 2 - (a.y + a.h / 2)) * k;
+  return { x: cx - w / 2, y: cy - h / 2, w, h };
+}
+
 export const MIN_ZOOM = 1;
 export const MAX_ZOOM = 8;
 
@@ -55,9 +96,7 @@ export class Viewport {
 
   /** Chuỗi viewBox của SVG. */
   toString(): string {
-    const v = this.view();
-    const r = (n: number) => Math.round(n * 100) / 100;
-    return `${r(v.x)} ${r(v.y)} ${r(v.w)} ${r(v.h)}`;
+    return viewToString(this.view());
   }
 
   /** Phóng to hoặc thu nhỏ theo hệ số, giữ nguyên điểm `at` (tọa độ bản vẽ) đứng yên trên màn hình. Mặc định lấy tâm. */

@@ -52,6 +52,7 @@ export function freshLayout(room: RoomDef, reg: Registry, nextUid: NextUid): Lay
     walls,
     doors: room.doors.map((d) => ({ ...d, uid: nextUid() })),
     windows: room.windows.map((d) => ({ ...d, uid: nextUid() })),
+    ...(room.rails ? { rails: [...room.rails] } : {}),
   };
 }
 
@@ -156,7 +157,7 @@ export function snapValue(v: number, on: boolean): number {
   return on ? Math.round(v / LIMITS.grid) * LIMITS.grid : Math.round(v);
 }
 
-/** Đổi kích thước phòng. Giá trị kẹp trong khoảng cho phép, món và cửa nằm ngoài phòng mới thì kéo vào mép. Trả về giá trị thực tế đã dùng. */
+/** Đổi kích thước phòng. Giá trị kẹp trong khoảng cho phép, món (cả đồ gắn tường, cao không quá trần) và cửa nằm ngoài phòng mới thì kéo vào mép. Trả về giá trị thực tế đã dùng. */
 export function setRoomDim(l: Layout, key: RoomDimKey, v: number): number {
   const { min, max } = ROOM_DIM_LIMITS[key];
   const val = clamp(Math.round(v), min, max);
@@ -166,6 +167,14 @@ export function setRoomDim(l: Layout, key: RoomDimKey, v: number): number {
     i.y = Math.min(i.y, l.H);
   }
   for (const o of [...l.doors, ...l.windows]) Object.assign(o, fitOpening(o, l.W, l.H));
+  // đồ gắn tường: tâm vẫn nằm trong tường mới, và đỉnh không vượt trần mới
+  for (const wl of WALL_KEYS) {
+    const len = wl === 'T' || wl === 'B' ? l.W : l.H;
+    for (const it of l.walls[wl]) {
+      it.x = Math.min(it.x, len);
+      it.y = Math.min(it.y, Math.max(0, l.ceil - it.h));
+    }
+  }
   return val;
 }
 

@@ -5,6 +5,7 @@ import type { WallKey } from '../data/schema';
 import type { Mode } from '../views/host';
 import type { Els } from './els';
 import { markSwatches } from './swatches';
+import { t, tn } from '../i18n';
 
 /** Món đang chọn, kèm thông tin lấy từ thư viện. */
 export interface SelModel {
@@ -38,9 +39,9 @@ function setVal(el: HTMLInputElement, v: string | number): void {
 }
 
 export function emptyText(mode: Mode): string {
-  if (mode === '3d') return 'Bấm vào một món trong khung 3D để chọn, kéo để di chuyển, rồi đổi màu, kích thước, xoay hoặc xóa ngay ở đây.';
-  if (mode === 'elev') return 'Bấm vào một món trên tường để đổi màu, kích thước và độ cao so với sàn. Bấm vào cửa đi hoặc cửa sổ để dời chỗ.';
-  return 'Bấm vào một món trên bản vẽ để đổi màu, xoay, xem kích thước. Bấm vào cửa đi hoặc cửa sổ trên tường để dời chỗ.';
+  if (mode === '3d') return t('Bấm vào một món trong khung 3D để chọn, kéo để di chuyển, rồi đổi màu, kích thước, xoay hoặc xóa ngay ở đây.');
+  if (mode === 'elev') return t('Bấm vào một món trên tường để đổi màu, kích thước và độ cao so với sàn. Bấm vào cửa đi hoặc cửa sổ để dời chỗ.');
+  return t('Bấm vào một món trên bản vẽ để đổi màu, xoay, xem kích thước. Bấm vào cửa đi hoặc cửa sổ trên tường để dời chỗ.');
 }
 
 export function paintRotation(els: Els, it: FloorItem): void {
@@ -53,11 +54,12 @@ export function updateProps(els: Els, m: PropsModel): void {
   const { layout: l, sel, opening: op } = m;
   markSwatches(els.floorSw, l.floor);
   markSwatches(els.wallSw, l.wall);
+  for (const b of els.rails.querySelectorAll<HTMLElement>('[data-rail]')) b.setAttribute('aria-pressed', String((l.rails ?? []).includes(b.dataset.rail as WallKey)));
   setVal(els.rW, l.W);
   setVal(els.rH, l.H);
   setVal(els.rC, l.ceil);
 
-  els.selHead.textContent = op ? (op.kind === 'door' ? 'Cửa đi đang chọn' : 'Cửa sổ đang chọn') : 'Món đang chọn';
+  els.selHead.textContent = op ? (op.kind === 'door' ? t('Cửa đi đang chọn') : t('Cửa sổ đang chọn')) : t('Món đang chọn');
   els.selEmpty.hidden = !!sel || !!op;
   els.selBox.hidden = !sel;
   els.opBox.hidden = !op;
@@ -68,12 +70,12 @@ export function updateProps(els: Els, m: PropsModel): void {
   const locked = !!sel?.item.locked;
   if (sel) {
     const it = sel.item;
-    els.selName.textContent = it.name;
+    els.selName.textContent = tn(it.name);
     els.selCustom.hidden = !sel.custom;
     els.selNote.hidden = !sel.note;
-    els.selNote.textContent = sel.note ?? '';
-    els.lblSize.textContent = onWall ? 'Rộng × cao (cm)' : 'Rộng × sâu (cm)';
-    els.selD.setAttribute('aria-label', onWall ? 'Cao' : 'Sâu');
+    els.selNote.textContent = sel.note ? tn(sel.note) : '';
+    els.lblSize.textContent = onWall ? t('Rộng × cao (cm)') : t('Rộng × sâu (cm)');
+    els.selD.setAttribute('aria-label', onWall ? t('Cao') : t('Sâu'));
     setVal(els.selW, it.w);
     setVal(els.selD, onWall ? (it as WallItem).h : (it as FloorItem).d);
     els.fieldY.hidden = !onWall;
@@ -96,7 +98,7 @@ export function updateProps(els: Els, m: PropsModel): void {
 function paintOpening(els: Els, op: OpeningModel): void {
   const o = op.item;
   for (const b of els.opWalls.querySelectorAll<HTMLElement>('[data-wall]')) b.setAttribute('aria-pressed', String(b.dataset.wall === o.wall));
-  els.lblOpPos.textContent = o.wall === 'T' || o.wall === 'B' ? 'Cách góc trái (cm)' : 'Cách góc trên (cm)';
+  els.lblOpPos.textContent = o.wall === 'T' || o.wall === 'B' ? t('Cách góc trái (cm)') : t('Cách góc trên (cm)');
   els.opPos.min = String(op.ranges.pos.min);
   els.opPos.max = String(op.ranges.pos.max);
   els.opW.min = String(op.ranges.w.min);
@@ -116,6 +118,8 @@ export interface PropsApp {
   setOpening(field: 'pos' | 'w', raw: string, final: boolean): number | null;
   /** Chuyển cửa đang chọn sang tường khác. */
   setOpeningWall(wall: WallKey): void;
+  /** Bật hoặc tắt lan can ở một cạnh của phòng. */
+  toggleRail(wall: WallKey): void;
   /** Cửa đi đang chọn: đổi bên bản lề, hoặc đổi mở vào trong, ra ngoài. */
   flipDoorHinge(): void;
   toggleDoorSwing(): void;
@@ -168,6 +172,10 @@ export function bindProps(els: Els, app: PropsApp): void {
       if (v !== null) el.value = String(v);
     });
   }
+  els.rails.addEventListener('click', (e) => {
+    const w = (e.target as Element).closest<HTMLElement>('[data-rail]')?.dataset.rail;
+    if (isWallKey(w)) app.toggleRail(w);
+  });
   els.opDel.addEventListener('click', () => app.removeSelected());
   els.opFlip.addEventListener('click', () => app.flipDoorHinge());
   els.opSwing.addEventListener('click', () => app.toggleDoorSwing());

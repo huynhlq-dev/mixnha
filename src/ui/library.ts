@@ -1,4 +1,5 @@
 import { escapeHtml, plain } from '../core/format';
+import { t, tn } from '../i18n';
 import type { Registry } from '../core/registry';
 import { roomDragId } from '../core/rooms';
 import { FLOOR_COLORS } from '../data/palettes';
@@ -44,9 +45,10 @@ export function libraryGroups(reg: Registry, mode: LibMode, query: string): LibG
   const groups: LibGroup[] = [];
   // nhóm Phòng: các loại phòng thêm vào căn hộ. Đứng cuối danh sách; xem 3D cả căn hộ thì là nhóm duy nhất (đồ không đặt được ở đó)
   const roomGroup = (): void => {
-    const title = mode === 'apartment3d' ? 'Phòng' : 'Phòng (thêm vào căn hộ)';
-    const items = ROOM_TYPE_IDS.filter((t) => !q || plain(`${ROOMS[t].name} ${title}`).includes(q)).map(
-      (t): LibItem => ({ id: roomDragId(t), name: ROOMS[t].name, color: FLOOR_COLORS[ROOMS[t].floor]?.hex ?? '#e2c9a4', size: `${ROOMS[t].W} × ${ROOMS[t].H} cm` }),
+    const title = mode === 'apartment3d' ? t('Phòng') : t('Phòng (thêm vào căn hộ)');
+    // tìm được cả bằng tên tiếng Việt lẫn tên đang hiện
+    const items = ROOM_TYPE_IDS.filter((r) => !q || plain(`${ROOMS[r].name} ${tn(ROOMS[r].name)} ${title}`).includes(q)).map(
+      (r): LibItem => ({ id: roomDragId(r), name: tn(ROOMS[r].name), color: FLOOR_COLORS[ROOMS[r].floor]?.hex ?? '#e2c9a4', size: `${ROOMS[r].W} × ${ROOMS[r].H} cm` }),
     );
     if (items.length) groups.push({ id: 'rooms', title, items });
   };
@@ -56,18 +58,19 @@ export function libraryGroups(reg: Registry, mode: LibMode, query: string): LibG
   }
   for (const cat of reg.categories) {
     if (place && cat.place !== place) continue;
-    const title = mode === '3d' && cat.place === 'wall' ? (cat.label3d ?? cat.name) : cat.name;
+    const title = tn(mode === '3d' && cat.place === 'wall' ? (cat.label3d ?? cat.name) : cat.name);
     const items = reg
       .live(cat.place)
-      .filter((it) => it.cat === cat.id && (!q || plain(`${it.name} ${title}`).includes(q)))
-      .map((it): LibItem => ({ id: it.id, name: it.name, color: it.color, size: sizeLabel(it) }));
+      .filter((it) => it.cat === cat.id && (!q || plain(`${it.name} ${tn(it.name)} ${title}`).includes(q)))
+      .map((it): LibItem => ({ id: it.id, name: tn(it.name), color: it.color, size: sizeLabel(it) }));
     if (items.length) groups.push({ id: cat.id, title, items });
   }
   for (const g of OPENING_GROUPS) {
+    const title = tn(g.title);
     const items = reg.openings
-      .filter((p) => p.kind === g.kind && (!q || plain(`${p.name} ${g.title}`).includes(q)))
-      .map((p): LibItem => ({ id: p.id, name: p.name, color: p.color, size: p.kind === 'door' ? `${p.w} cm` : `${p.w} × ${p.h ?? 120} cm` }));
-    if (items.length) groups.push({ id: g.id, title: g.title, items });
+      .filter((p) => p.kind === g.kind && (!q || plain(`${p.name} ${tn(p.name)} ${g.title} ${title}`).includes(q)))
+      .map((p): LibItem => ({ id: p.id, name: tn(p.name), color: p.color, size: p.kind === 'door' ? `${p.w} cm` : `${p.w} × ${p.h ?? 120} cm` }));
+    if (items.length) groups.push({ id: g.id, title, items });
   }
   roomGroup();
   return groups;
@@ -92,7 +95,7 @@ function itemsHtml(items: readonly LibItem[]): string {
  * Không thì mỗi nhóm là một hàng tiêu đề, chỉ nhóm đang chọn (open) mới hiện danh sách món.
  */
 export function libraryHtml(groups: readonly LibGroup[], open: string | null = null, searching = false): string {
-  if (!groups.length) return '<p class="empty" style="margin-top:12px">Không có món nào khớp.</p>';
+  if (!groups.length) return `<p class="empty" style="margin-top:12px">${t('Không có món nào khớp.')}</p>`;
   if (searching) return groups.map((g) => `<div class="cat"><h3>${escapeHtml(g.title)}</h3>${itemsHtml(g.items)}</div>`).join('');
   const rows = groups.map((g) => {
     const on = g.id === open;
@@ -109,17 +112,20 @@ export function libraryHtml(groups: readonly LibGroup[], open: string | null = n
 
 /** Gợi ý dưới danh sách. Chưa tìm kiếm thì nhắc chọn nhóm trước, vì các nhóm đang đóng. */
 export function libraryHint(mode: LibMode, searching = false): string {
-  const text =
-    mode === 'apartment3d'
-      ? 'bấm hoặc kéo một loại phòng vào mô hình để thêm phòng vào căn hộ. Muốn xóa phòng: bật "Chỉnh bố cục" ở mặt bằng, chọn phòng rồi bấm Delete.'
-      : mode === 'apartment'
-        ? 'kéo một món thả vào phòng trên mô hình (bấm thì món vào phòng đang chọn). Loại phòng thì thêm phòng mới vào căn hộ.'
-        : mode === '3d'
-          ? 'bấm để thả vào phòng, hoặc kéo thẳng vào khung 3D. Đồ gắn tường (tủ bếp trên, tivi, tranh...) lên bức tường phía xa hoặc đúng chỗ bạn thả.'
-          : mode === 'elev'
-            ? 'bấm hoặc kéo một món lên bức tường đang xem.'
-            : 'bấm hoặc kéo một món vào bản vẽ.';
-  return searching ? text.charAt(0).toUpperCase() + text.slice(1) : `Chọn một nhóm, rồi ${text}`;
+  switch (mode) {
+    case 'apartment3d':
+      return searching ? t('Bấm hoặc kéo một loại phòng vào mô hình để thêm phòng vào căn hộ. Muốn xóa phòng: bật "Chỉnh bố cục" ở mặt bằng, chọn phòng rồi bấm Delete.') : t('Chọn một nhóm, rồi bấm hoặc kéo một loại phòng vào mô hình để thêm phòng vào căn hộ. Muốn xóa phòng: bật "Chỉnh bố cục" ở mặt bằng, chọn phòng rồi bấm Delete.');
+    case 'apartment':
+      return searching ? t('Kéo một món thả vào phòng trên mô hình (bấm thì món vào phòng đang chọn). Loại phòng thì thêm phòng mới vào căn hộ.') : t('Chọn một nhóm, rồi kéo một món thả vào phòng trên mô hình (bấm thì món vào phòng đang chọn). Loại phòng thì thêm phòng mới vào căn hộ.');
+    case '3d':
+      return searching ? t('Bấm để thả vào phòng, hoặc kéo thẳng vào khung 3D. Đồ gắn tường (tủ bếp trên, tivi, tranh...) lên bức tường phía xa hoặc đúng chỗ bạn thả.') : t('Chọn một nhóm, rồi bấm để thả vào phòng, hoặc kéo thẳng vào khung 3D. Đồ gắn tường (tủ bếp trên, tivi, tranh...) lên bức tường phía xa hoặc đúng chỗ bạn thả.');
+    case 'elev':
+      return searching ? t('Bấm hoặc kéo một món lên bức tường đang xem.') : t('Chọn một nhóm, rồi bấm hoặc kéo một món lên bức tường đang xem.');
+    case 'plan':
+      return searching ? t('Bấm hoặc kéo một món vào bản vẽ.') : t('Chọn một nhóm, rồi bấm hoặc kéo một món vào bản vẽ.');
+    default:
+      return '';
+  }
 }
 
 /** Cột thư viện bên trái: chọn nhóm để xem danh sách, tìm kiếm, bấm để thêm, kéo để thả vào bản vẽ. */

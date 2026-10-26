@@ -16,6 +16,8 @@ export function queryEls(root: ParentNode = document) {
   const div = (id: string) => find(root, id, HTMLElement);
   return {
     btnTheme: btn('btnTheme'),
+    langBox: div('langBox'),
+    npLang: div('npLang'),
 
     remind: div('remind'),
     remindText: div('remindText'),
@@ -50,6 +52,7 @@ export function queryEls(root: ParentNode = document) {
     propsRoom: div('propsRoom'),
     roomSec: div('roomSec'),
     roomHead: div('roomHead'),
+    rails: div('rails'),
     wallsRow: div('wallsRow'),
     walls: div('walls'),
     mini: find(root, 'mini', SVGSVGElement),

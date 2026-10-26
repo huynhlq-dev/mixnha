@@ -1,6 +1,7 @@
 import { escapeHtml } from '../core/format';
 import { normHex } from '../core/color';
 import type { NamedColor } from '../data/schema';
+import { t, tn } from '../i18n';
 
 /** Ô màu thuộc nhóm nào: sàn, tường, món đang chọn, hoặc màu gần đây của bút. */
 export type SwatchKey = 'floor' | 'wall' | 'item' | 'pen';
@@ -8,16 +9,16 @@ export type SwatchKey = 'floor' | 'wall' | 'item' | 'pen';
 /** Dãy ô màu gợi ý cộng một ô chọn màu tùy ý. */
 export function swatchesHtml(key: Exclude<SwatchKey, 'pen'>, colors: readonly NamedColor[]): string {
   const fixed = colors
-    .map((c) => `<button class="swatch" type="button" data-k="${key}" data-c="${c.hex.toLowerCase()}" style="background:${c.hex}" aria-label="${escapeHtml(c.name)}" aria-pressed="false"></button>`)
+    .map((c) => `<button class="swatch" type="button" data-k="${key}" data-c="${c.hex.toLowerCase()}" style="background:${c.hex}" aria-label="${escapeHtml(tn(c.name))}" aria-pressed="false"></button>`)
     .join('');
-  return `${fixed}<label class="swatch custom" data-on="false" title="Màu tùy chọn"><input type="color" data-k="${key}" value="#ffffff" aria-label="Màu tùy chọn"></label>`;
+  return `${fixed}<label class="swatch custom" data-on="false" title="${t('Màu tùy chọn')}"><input type="color" data-k="${key}" value="#ffffff" aria-label="${t('Màu tùy chọn')}"></label>`;
 }
 
 /** Các màu bút dùng gần đây, màu đang chọn được đánh dấu. */
 export function recentHtml(recent: readonly string[], current: string): string {
-  if (!recent.length) return '<span class="empty">Chưa có màu nào.</span>';
+  if (!recent.length) return `<span class="empty">${t('Chưa có màu nào.')}</span>`;
   return recent
-    .map((c) => `<button class="swatch" type="button" data-k="pen" data-c="${c}" style="background:${c}" aria-label="Màu ${c}" aria-pressed="${c === current}"></button>`)
+    .map((c) => `<button class="swatch" type="button" data-k="pen" data-c="${c}" style="background:${c}" aria-label="${t('Màu {c}', { c })}" aria-pressed="${c === current}"></button>`)
     .join('');
 }
 

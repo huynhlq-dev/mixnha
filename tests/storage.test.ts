@@ -1153,3 +1153,65 @@ describe('lịch sử: bước mới hay gộp bước', () => {
     expect(h.lastWasNewStep).toBe(true);
   });
 });
+
+describe('cất và khôi phục lịch sử của một phòng', () => {
+  it('snapshot chụp đủ các bước lùi, tiến và bố trí hiện tại; phòng chưa có lịch sử thì null', () => {
+    const base = sampleLayouts();
+    const h = new History();
+    h.reset(base);
+    expect(h.snapshot('bep')).not.toBeNull();
+    expect(h.snapshot('khong-co')).toBeNull();
+    h.commit('ngu', moved(base.ngu, 1), false);
+    h.commit('ngu', moved(base.ngu, 2), false);
+    h.undo('ngu');
+    const snap = h.snapshot('ngu')!;
+    expect(snap.undo).toHaveLength(1);
+    expect(snap.redo).toHaveLength(1);
+    expect(JSON.parse(snap.cur)).toEqual(moved(base.ngu, 1));
+  });
+
+  it('bản chụp không đổi theo lịch sử về sau (là bản sao)', () => {
+    const base = sampleLayouts();
+    const h = new History();
+    h.reset(base);
+    h.commit('ngu', moved(base.ngu, 1), false);
+    const snap = h.snapshot('ngu')!;
+    h.commit('ngu', moved(base.ngu, 2), false);
+    expect(snap.undo).toHaveLength(1);
+  });
+
+  it('xóa phòng rồi đưa lại bằng restore: các bước lùi, tiến cũ dùng được tiếp', () => {
+    const base = sampleLayouts();
+    const h = new History();
+    h.reset(base);
+    const a = moved(base.ngu, 11);
+    const b = moved(base.ngu, 22);
+    h.commit('ngu', a, false);
+    h.commit('ngu', b, false);
+    h.undo('ngu');
+    const snap = h.snapshot('ngu')!;
+    h.remove('ngu');
+    expect(h.canUndo('ngu')).toBe(false);
+    h.add('ngu', a);
+    // add bắt đầu lịch sử mới; restore trả lại lịch sử cũ
+    expect(h.canUndo('ngu')).toBe(false);
+    h.restore('ngu', snap);
+    expect(h.canRedo('ngu')).toBe(true);
+    expect(h.redo('ngu')).toEqual(b);
+    expect(h.undo('ngu')).toEqual(a);
+    expect(h.undo('ngu')).toEqual(base.ngu);
+  });
+
+  it('restore không làm hỏng thao tác liên tục kế tiếp (không gộp nhầm vào bước cũ)', () => {
+    const c = clock();
+    const base = sampleLayouts();
+    const h = new History({ now: c.now });
+    h.reset(base);
+    h.commit('ngu', moved(base.ngu, 1), true);
+    const snap = h.snapshot('ngu')!;
+    h.restore('ngu', snap);
+    c.tick(10);
+    expect(h.commit('ngu', moved(base.ngu, 2), true)).toBe(true);
+    expect(h.lastWasNewStep).toBe(true);
+  });
+});

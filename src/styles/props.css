@@ -247,6 +247,9 @@
   font-family: var(--mono);
   font-weight: 600;
 }
+.aptstats dd.tot {
+  color: var(--accent);
+}
 
 .aptinfo .sizes label span {
   display: block;

@@ -41,7 +41,7 @@ describe('chọn số phòng khi tạo dự án', () => {
 
 describe('danh sách phòng của dự án', () => {
   it('theo thứ tự loại phòng trong thư viện, không theo thứ tự ghi trong counts', () => {
-    const rooms = projectRooms({ trong: 1, lamviec: 1, wc: 1, bep: 1, khach: 1, ngu: 1 });
+    const rooms = projectRooms({ banchong: 1, trong: 1, lamviec: 1, wc: 1, bep: 1, khach: 1, ngu: 1 });
     expect(rooms.map((r) => r.type)).toEqual([...ROOM_TYPE_IDS]);
   });
 

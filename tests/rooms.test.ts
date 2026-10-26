@@ -12,11 +12,12 @@ describe('căn hộ mặc định và các loại phòng', () => {
   });
 
   it('mọi loại phòng đều là một khai báo đủ dùng: có cửa đi, có bố cục mẫu dựng được', () => {
-    expect(ROOM_TYPE_IDS).toEqual(expect.arrayContaining(['ngu', 'khach', 'bep', 'wc', 'lamviec', 'trong']));
+    expect(ROOM_TYPE_IDS).toEqual(expect.arrayContaining(['ngu', 'khach', 'bep', 'wc', 'lamviec', 'trong', 'banchong']));
     let uid = 1;
     for (const t of ROOM_TYPE_IDS) {
       expect(ROOMS[t].id).toBe(t);
-      expect(ROOMS[t].doors?.length ?? 0).toBeGreaterThan(0);
+      // mỗi loại phòng có lối vào: cửa đi, hoặc cửa kính (ban công)
+      expect((ROOMS[t].doors?.length ?? 0) + (ROOMS[t].windows?.length ?? 0)).toBeGreaterThan(0);
       const l = freshLayout(ROOMS[t], registry, () => uid++);
       expect(l.W).toBe(ROOMS[t].W);
       expect(l.H).toBe(ROOMS[t].H);

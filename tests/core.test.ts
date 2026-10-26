@@ -214,6 +214,23 @@ describe('thao tác trên bố trí', () => {
     expect(l.items.every((i) => i.x <= 150)).toBe(true);
     expect(setRoomDim(l, 'ceil', 300.4)).toBe(300);
   });
+  it('setRoomDim cũng kéo đồ gắn tường vào: tâm không quá tường mới, đỉnh không vượt trần mới', () => {
+    const l = ngu();
+    const mk = (x: number, y: number, h: number) => ({ uid: 9000 + Math.round(x), id: 'ac', name: 'x', w: 40, h, x, y, color: '#ffffff' });
+    l.walls.T = [mk(380, 240, 30)];
+    l.walls.R = [mk(340, 100, 40)];
+    // thu hẹp phòng: tường trên còn 200 cm, tường phải (cạnh dọc) còn 150 cm
+    setRoomDim(l, 'W', 200);
+    setRoomDim(l, 'H', 150);
+    expect(l.walls.T[0]!.x).toBe(200);
+    expect(l.walls.R[0]!.x).toBe(150);
+    // hạ trần xuống 242: món cao 30 đặt ở 240 phải hạ xuống để đỉnh không quá trần
+    setRoomDim(l, 'ceil', 242);
+    expect(l.walls.T[0]!.y + l.walls.T[0]!.h).toBeLessThanOrEqual(242);
+    expect(l.walls.T[0]!.y).toBe(212);
+    // món thấp nằm dưới trần thì không đổi
+    expect(l.walls.R[0]!.y).toBe(100);
+  });
   it('snapValue theo lưới 5 cm', () => {
     expect(snapValue(12, true)).toBe(10);
     expect(snapValue(13, true)).toBe(15);

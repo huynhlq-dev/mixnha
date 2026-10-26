@@ -11,6 +11,7 @@ import type { DoorItem, FloorItem, Layout, OpeningKind, OpeningSel, Selection } 
 import type { OpeningDef, WallKey } from '../data/schema';
 import { MARGIN, type Frame } from './frame';
 import { edgeTag, gridLines, hdim, HALO, lockGlyph, n2, openingLabel, openingOpen, pickLabel, vdim } from './svg';
+import { t, tn } from '../i18n';
 
 export interface PlanInput {
   layout: Layout;
@@ -25,6 +26,8 @@ export interface PlanInput {
   detail?: boolean;
   /** Vẽ gọn để đặt vào mô hình cả căn hộ: không lưới, không đường kích thước tổng của phòng, không vạch lối đi hẹp nhất. */
   compact?: boolean;
+  /** "things": chỉ vẽ cửa và đồ (không sàn, tường, lan can), dùng làm lớp bóng của phần phòng bị phòng khác che. Mặc định "all". */
+  layer?: 'all' | 'things';
 }
 
 const INK = '#15211E';
@@ -61,6 +64,31 @@ function openingDims(R: RoomSize, d: OpeningDef): string {
   return (
     (d.pos >= 1 ? seg(0, d.pos, fm(d.pos), ACCENT, true) : '') + seg(d.pos, end, `${fm(d.w)} cm`, ACCENT, false) + (len - end >= 1 ? seg(end, len, fm(len - end), ACCENT, true) : '')
   );
+}
+
+/** Khoảng cách giữa hai trụ lan can trên mặt bằng (cm). */
+const RAIL_POST_GAP = 40;
+
+/**
+ * Lan can thay cho tường ở các cạnh `rails`: xóa dải tường dày 10 cm ở cạnh đó (trả lại màu sàn), vẽ một nét lan can mảnh nằm giữa dải
+ * kèm các trụ nhỏ. Bốn ô vuông ở góc vẫn còn, như trụ góc.
+ */
+function railsSvg(R: RoomSize, rails: readonly WallKey[], floor: string): string {
+  const { W, H } = R;
+  const post = (x: number, y: number): string => `M${n2(x - 2.5)} ${n2(y - 2.5)}h5v5h-5z`;
+  const o: string[] = [];
+  for (const wl of rails) {
+    const horizontal = wl === 'T' || wl === 'B';
+    const len = horizontal ? W : H;
+    const c = wl === 'T' || wl === 'L' ? -5 : (horizontal ? H : W) + 5;
+    const band = horizontal ? `x="0" y="${n2(c - 5.5)}" width="${W}" height="11"` : `x="${n2(c - 5.5)}" y="0" width="11" height="${H}"`;
+    let posts = '';
+    for (let s = 0; s < len; s += RAIL_POST_GAP) posts += horizontal ? post(s, c) : post(c, s);
+    posts += horizontal ? post(len, c) : post(c, len);
+    const line = horizontal ? `M0 ${c}H${len}` : `M${c} 0V${len}`;
+    o.push(`<rect ${band} style="fill:${floor}"/><path d="${line}" style="fill:none;stroke:${INK};stroke-width:1.6"/><path d="${posts}" style="fill:${INK}"/>`);
+  }
+  return o.join('');
 }
 
 /** Nhãn trong món: tên (hoặc tên ngắn) và, nếu đủ chỗ, kích thước rộng × sâu. */
@@ -126,13 +154,18 @@ function rotationHandle(it: FloorItem): string {
 export function renderPlan(i: PlanInput): Frame {
   const { layout: L, R, reg, dim } = i;
   const { W, H } = R;
+  const things = i.layer === 'things';
+  const compact = !!i.compact || things;
   const selUid = i.sel?.scope === 'floor' ? i.sel.uid : null;
   const info = analysePlan(L, R, reg);
   const o: string[] = [];
 
-  o.push(`<rect x="0" y="0" width="${W}" height="${H}" style="fill:${L.floor}"/>`);
-  if (!i.compact) o.push(gridLines(W, H));
-  o.push(`<path fill-rule="evenodd" d="M-10 -10H${W + 10}V${H + 10}H-10Z M0 0V${H}H${W}V0Z" style="fill:${L.wall};stroke:${INK};stroke-opacity:.7;stroke-width:1"/>`);
+  if (!things) {
+    o.push(`<rect x="0" y="0" width="${W}" height="${H}" style="fill:${L.floor}"/>`);
+    if (!compact) o.push(gridLines(W, H));
+    o.push(`<path fill-rule="evenodd" d="M-10 -10H${W + 10}V${H + 10}H-10Z M0 0V${H}H${W}V0Z" style="fill:${L.wall};stroke:${INK};stroke-opacity:.7;stroke-width:1"/>`);
+    if (R.rails.length) o.push(railsSvg(R, R.rails, L.floor));
+  }
   // cửa đi, cửa sổ: chồng lên nhau thì viền cam, đang chọn thì viền xanh
   const overlap = overlappingOpenings(R);
   const opLook = (kind: OpeningKind, d: DoorItem): { col: string; hot: boolean } => {
@@ -177,13 +210,13 @@ export function renderPlan(i: PlanInput): Frame {
     const short = reg.resolve(it.id)?.short;
     const lock = it.locked ? lockGlyph(-it.w / 2 + 9, -it.d / 2 + 9, it.rot) : '';
     o.push(
-      `<g class="it" data-uid="${it.uid}" tabindex="0" role="button" aria-label="${escapeHtml(it.name)}, ${fm(it.w)} x ${fm(it.d)} cm${it.locked ? ', đã khóa' : ''}" transform="translate(${n2(it.x)} ${n2(it.y)}) rotate(${n2(it.rot)})" style="cursor:${it.locked ? 'pointer' : 'move'}">` +
+      `<g class="it" data-uid="${it.uid}" tabindex="0" role="button" aria-label="${escapeHtml(t('{name}, {w} x {d} cm', { name: tn(it.name), w: fm(it.w), d: fm(it.d) }))}${it.locked ? escapeHtml(t(', đã khóa')) : ''}" transform="translate(${n2(it.x)} ${n2(it.y)}) rotate(${n2(it.rot)})" style="cursor:${it.locked ? 'pointer' : 'move'}">` +
         `<rect x="${-it.w / 2}" y="${-it.d / 2}" width="${it.w}" height="${it.d}" rx="3" style="fill:${it.color};fill-opacity:${it.z === 0 ? 0.8 : 1};stroke:${stroke};stroke-width:${sw}"${it.z === 0 ? ' stroke-dasharray="6 4"' : ''}/>` +
         `<g transform="rotate(${n2(-it.rot)})">${itemLabel(it, box, short, dim, tc)}</g>${lock}</g>`,
     );
   }
 
-  if (dim && info.gap && !i.compact) {
+  if (dim && info.gap && !compact) {
     const g = info.gap;
     const col = g.dist >= MIN_LANE ? 'var(--ok)' : 'var(--warn)';
     o.push(g.horizontal ? hdim(g.x0!, g.x1!, g.y!, fm(g.dist), col) : vdim(g.y0!, g.y1!, g.x!, fm(g.dist), col, 1));
@@ -192,7 +225,7 @@ export function renderPlan(i: PlanInput): Frame {
   const reach = outReach(R);
   const dimAt = (side: 'T' | 'L'): number => (reach[side] > 0 ? reach[side] + 14 : 30);
   const margin = (side: WallKey): number => (reach[side] > 0 ? Math.max(MARGIN, (side === 'T' || side === 'L' ? dimAt(side) : reach[side]) + 22) : MARGIN);
-  if (!i.compact) {
+  if (!compact) {
     o.push(hdim(0, W, -dimAt('T'), `${W} cm`, 'var(--muted)'));
     o.push(vdim(0, H, -dimAt('L'), `${H} cm`, 'var(--muted)', -1));
   }
@@ -224,27 +257,27 @@ export function renderPlan(i: PlanInput): Frame {
   let text: string;
   if (overlap.size > 0) {
     tone = 'bad';
-    text = 'Cửa đi hoặc cửa sổ đang chồng lên nhau (viền cam), hãy dời ra xa nhau.';
+    text = t('Cửa đi hoặc cửa sổ đang chồng lên nhau (viền cam), hãy dời ra xa nhau.');
   } else if (nbad > 0) {
     tone = 'bad';
-    text = `${nbad} món đang chồng lấn, nằm ngoài phòng hoặc chắn vùng mở cửa (nét đứt).`;
+    text = t('{n} món đang chồng lấn, nằm ngoài phòng hoặc chắn vùng mở cửa (nét đứt).', { n: nbad });
   } else if (info.gap && info.gap.dist < MIN_LANE) {
     tone = 'bad';
-    text = `Lối đi giữa ${info.gap.a} và ${info.gap.b} chỉ rộng ${fm(info.gap.dist)} cm. Nên chừa từ ${MIN_LANE} cm.`;
+    text = t('Lối đi giữa {a} và {b} chỉ rộng {dist} cm. Nên chừa từ {min} cm.', { a: tn(info.gap.a), b: tn(info.gap.b), dist: fm(info.gap.dist), min: MIN_LANE });
   } else if (info.gap) {
-    text = `Không chồng lấn. Lối đi hẹp nhất là ${fm(info.gap.dist)} cm, giữa ${info.gap.a} và ${info.gap.b}.`;
+    text = t('Không chồng lấn. Lối đi hẹp nhất là {dist} cm, giữa {a} và {b}.', { dist: fm(info.gap.dist), a: tn(info.gap.a), b: tn(info.gap.b) });
   } else {
-    text = 'Không chồng lấn.';
+    text = t('Không chồng lấn.');
   }
 
   return {
     bounds: { x: -margin('L'), y: -margin('T'), w: W + margin('L') + margin('R'), h: H + margin('T') + margin('B') },
-    aria: `Mặt bằng ${R.name} ${W} x ${H} cm, ${L.items.length} món đồ`,
+    aria: t('Mặt bằng {room} {W} x {H} cm, {n} món đồ', { room: tn(R.name), W, H, n: L.items.length }),
     svg: o.join(''),
-    title: R.name,
+    title: tn(R.name),
     size: `${W} × ${H} cm`,
     area: `${fm((W * H) / 10000)} m²`,
-    status: { tone, text: `${text} Đồ chiếm ${info.pct}% diện tích sàn.` },
+    status: { tone, text: `${text} ${t('Đồ chiếm {pct}% diện tích sàn.', { pct: info.pct })}` },
   };
 }
 

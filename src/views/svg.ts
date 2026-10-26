@@ -2,6 +2,7 @@ import { escapeHtml, fm } from '../core/format';
 import type { OpeningKind } from '../core/types';
 import type { WallKey } from '../data/schema';
 import { WALL_NAMES } from '../data/walls';
+import { t, tn } from '../i18n';
 
 /** Làm tròn số khi ghi vào SVG, tránh các số thập phân dài do tính sin, cos. */
 export const n2 = (v: number): number => Math.round(v * 100) / 100;
@@ -31,8 +32,8 @@ export function vdim(y0: number, y1: number, x: number, txt: string, col: string
 }
 
 /** Chữ vừa trong chiều dài len (đơn vị cm trên bản vẽ) hay không. Ước lượng 5,3 cm mỗi ký tự ở cỡ chữ 9. */
-export function fitText(t: string, len: number): boolean {
-  return t.length * 5.3 <= len - 6;
+export function fitText(text: string, len: number): boolean {
+  return text.length * 5.3 <= len - 6;
 }
 
 export interface Label {
@@ -46,10 +47,12 @@ export interface Label {
  * rồi đến tên ngắn khai báo trong dữ liệu. Không món nào vừa thì không ghi.
  */
 export function pickLabel(name: string, short: string | undefined, w: number, h: number): Label | null {
-  const tries = [name, short || name.split(' ')[0]!];
-  for (const t of tries) {
-    if (h >= 16 && fitText(t, w)) return { t, rot: false };
-    if (w < h && w >= 14 && fitText(t, h)) return { t, rot: true };
+  // tên và tên ngắn đều theo ngôn ngữ đang chọn
+  const full = tn(name);
+  const tries = [full, short ? tn(short) : full.split(' ')[0]!];
+  for (const text of tries) {
+    if (h >= 16 && fitText(text, w)) return { t: text, rot: false };
+    if (w < h && w >= 14 && fitText(text, h)) return { t: text, rot: true };
   }
   return null;
 }
@@ -100,7 +103,8 @@ export function edgeTag(x: number, y: number, angle: number, text: string, kind:
 
 /** Tên đọc cho cửa đi hoặc cửa sổ (dùng làm aria-label): loại, tường và chiều rộng. */
 export function openingLabel(kind: OpeningKind, d: { wall: WallKey; w: number }): string {
-  return `${kind === 'door' ? 'Cửa đi' : 'Cửa sổ'}, ${WALL_NAMES[d.wall].toLowerCase()}, rộng ${fm(d.w)} cm`;
+  const p = { wall: tn(WALL_NAMES[d.wall]).toLowerCase(), w: fm(d.w) };
+  return kind === 'door' ? t('Cửa đi, {wall}, rộng {w} cm', p) : t('Cửa sổ, {wall}, rộng {w} cm', p);
 }
 
 /** Mở nhóm SVG của một cửa đi hoặc cửa sổ: chọn được, kéo được. Đóng bằng </g>. */

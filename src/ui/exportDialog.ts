@@ -4,6 +4,7 @@ import type { RoomEntry, RoomId } from '../data/rooms';
 import { buildFile, byteLength, makeFilename, serializeFile, summarizeExport, type ExportScope } from '../storage/file';
 import { copyText, downloadText, openDialog } from './dialog';
 import type { Els } from './els';
+import { t, tn } from '../i18n';
 
 export interface ExportMeta {
   name: string;
@@ -32,7 +33,7 @@ type ExportEls = Pick<Els, 'dlgExport' | 'exName' | 'exNote' | 'exScopeAll' | 'e
 
 /** "4 phòng · 31 món · khoảng 14 KB" */
 export function exportSummary(rooms: number, items: number, bytes: number): string {
-  return `${rooms} phòng · ${items} món · khoảng ${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${t('{n} phòng', { n: rooms })} · ${t('{n} món', { n: items })} · ${t('khoảng {kb} KB', { kb: Math.max(1, Math.round(bytes / 1024)) })}`;
 }
 
 /** Hộp thoại Xuất bản thiết kế: đặt tên, ghi chú, chọn phạm vi, rồi tải file hoặc sao chép nội dung. */
@@ -58,8 +59,8 @@ export class ExportDialog {
     els.exName.value = m.name;
     els.exNote.value = m.note;
     const rooms = deps.rooms();
-    els.exScopeAll.textContent = `Cả ${rooms.length} phòng`;
-    els.exScopeRoom.textContent = `Chỉ phòng đang mở: ${rooms.find((r) => r.id === deps.room())?.name ?? ''}`;
+    els.exScopeAll.textContent = t('Cả {n} phòng', { n: rooms.length });
+    els.exScopeRoom.textContent = t('Chỉ phòng đang mở: {name}', { name: tn(rooms.find((r) => r.id === deps.room())?.name ?? '') });
     this.radio('all').checked = true;
     this.say('', false);
     this.update();
@@ -105,18 +106,18 @@ export class ExportDialog {
     this.remember();
     this.deps.onExported();
     this.els.dlgExport.close();
-    this.deps.notice(`Đã tải xuống ${filename}`);
+    this.deps.notice(t('Đã tải xuống {filename}', { filename }));
   }
 
   private async copy(): Promise<void> {
     const { text } = this.build();
     const ok = await (this.deps.copy ?? copyText)(text);
     if (!ok) {
-      this.say('Trình duyệt không cho sao chép. Hãy dùng nút Tải file .json.', true);
+      this.say(t('Trình duyệt không cho sao chép. Hãy dùng nút Tải file .json.'), true);
       return;
     }
     this.remember();
     this.deps.onExported();
-    this.say('Đã sao chép. Dán vào tin nhắn hoặc email để gửi, người nhận dùng Nhập file, mục dán nội dung.', false);
+    this.say(t('Đã sao chép. Dán vào tin nhắn hoặc email để gửi, người nhận dùng Nhập file, mục dán nội dung.'), false);
   }
 }

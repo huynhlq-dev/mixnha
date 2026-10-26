@@ -28,6 +28,32 @@
   display: flex;
   gap: 8px;
 }
+/* nhóm nút chọn ngôn ngữ (VI | EN) ở góc phải: hai nút liền nhau, nút đang dùng đậm màu */
+.lang {
+  display: inline-flex;
+}
+.lang .btn {
+  min-width: 42px;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+.lang .btn:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.lang .btn:last-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: -1px;
+}
+.lang .btn[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--surface);
+  border-color: var(--ink);
+  position: relative;
+}
 
 .tabs {
   display: flex;

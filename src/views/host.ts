@@ -60,6 +60,8 @@ export interface Host {
   aptPlan(): AptPlan;
   /** Vị trí và cỡ hiện tại của mọi phòng trong mô hình, theo tọa độ căn hộ (cm). */
   aptRects(): Record<RoomId, AptRect>;
+  /** Thứ tự lớp của các phòng từ dưới lên trên (phòng nằm trên che phòng nằm dưới khi chồng nhau). */
+  aptStack(): RoomId[];
   /**
    * Mô hình cả căn: từ giờ thao tác (chọn đồ, kéo, bút màu) là trên phòng này, tức layout() và geo() trả về phòng này.
    * Đổi sang phòng khác thì bỏ chọn món cũ.

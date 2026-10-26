@@ -91,6 +91,9 @@ export function validateData(items: readonly ItemDef[], categories: readonly Cat
   for (const r of rooms) {
     if (!FLOOR_COLORS[r.floor]) err(r.id, `floor = ${r.floor} không có trong FLOOR_COLORS`, 'floor');
     const lenOf = (w: string) => (w === 'T' || w === 'B' ? r.W : r.H);
+    const rails = r.rails ?? [];
+    for (const w of rails) if (!WALL_KEYS.includes(w)) err(r.id, `Lan can ở cạnh "${String(w)}" không đúng: chỉ có T, R, B, L`, 'rails');
+    if (new Set(rails).size !== rails.length) err(r.id, 'Cạnh lan can bị ghi trùng', 'rails');
     for (const d of [...r.doors, ...r.windows]) {
       if (d.pos < 0 || d.pos + d.w > lenOf(d.wall)) err(r.id, `Cửa hoặc cửa sổ trên tường ${d.wall} vượt quá chiều dài tường`, 'doors');
     }

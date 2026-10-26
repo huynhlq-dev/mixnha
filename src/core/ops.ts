@@ -1,6 +1,7 @@
 import type { DoorDef, DoorHinge, DoorSwing, ItemDef, OpeningPreset, WallKey } from '../data/schema';
 import { alongWall, clamp, nearestWall, posFromRange, roundDeg, wallLength } from './geometry';
 import { canEdit, countItems, makeFloorItem, makeWallItem, snapValue } from './layout';
+import { WALL_KEYS } from '../data/walls';
 import { LIMITS } from './limits';
 import { fitOpening } from './room';
 import type { AnyItem, DoorItem, FloorItem, Layout, OpeningKind, OpeningSel, Scope, Selection, WallItem, WindowItem } from './types';
@@ -300,6 +301,10 @@ export type ResetScope = 'plan' | 'all' | WallKey;
  * Tên tường: chỉ đồ gắn tường của tường đó. all: cả phòng. Cửa đi và cửa sổ về chỗ cũ theo plan và all.
  */
 export function resetTo(l: Layout, fresh: Layout, scope: ResetScope): void {
+  if (scope === 'all' || scope === 'plan') {
+    if (fresh.rails) l.rails = [...fresh.rails];
+    else delete l.rails;
+  }
   if (scope === 'all') {
     Object.assign(l, fresh);
   } else if (scope === 'plan') {
@@ -314,4 +319,16 @@ export function resetTo(l: Layout, fresh: Layout, scope: ResetScope): void {
   } else {
     l.walls[scope] = fresh.walls[scope];
   }
+}
+
+/**
+ * Bật hoặc tắt lan can ở một cạnh phòng (cạnh làm lan can thì không xây tường). Danh sách luôn theo thứ tự trên, phải, dưới, trái.
+ * Trả về true nếu cạnh đó giờ là lan can.
+ */
+export function toggleRail(l: Layout, wall: WallKey): boolean {
+  const cur = new Set(l.rails ?? []);
+  if (cur.has(wall)) cur.delete(wall);
+  else cur.add(wall);
+  l.rails = WALL_KEYS.filter((w) => cur.has(w));
+  return cur.has(wall);
 }

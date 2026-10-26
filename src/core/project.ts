@@ -4,6 +4,7 @@ import { LIMITS } from './limits';
 import type { Registry } from './registry';
 import { newRoomEntry, roomDef } from './rooms';
 import type { Layouts } from './types';
+import { t } from '../i18n';
 
 /** Số phòng mỗi loại. Loại không ghi thì là 0. */
 export type RoomCounts = Partial<Record<RoomTypeId, number>>;
@@ -16,7 +17,7 @@ export interface ProjectSpec {
 }
 
 /** Số phòng mỗi loại lúc mở trình tạo dự án: căn hộ nhỏ đủ bốn phòng. */
-export const DEFAULT_COUNTS: Readonly<Record<RoomTypeId, number>> = { ngu: 1, khach: 1, bep: 1, wc: 1, lamviec: 0, trong: 0 };
+export const DEFAULT_COUNTS: Readonly<Record<RoomTypeId, number>> = { ngu: 1, khach: 1, bep: 1, wc: 1, lamviec: 0, trong: 0, banchong: 0 };
 
 /** Số phòng của một loại, đã làm tròn và kẹp về 0 trở lên (số lạ coi là 0). */
 export function countOf(counts: RoomCounts, type: RoomTypeId): number {
@@ -37,8 +38,8 @@ export function totalArea(counts: RoomCounts): number {
 /** Thông báo lỗi nếu chưa tạo được dự án (ít nhất 1, nhiều nhất LIMITS.maxRooms phòng), không thì null. */
 export function countsError(counts: RoomCounts): string | null {
   const n = totalRooms(counts);
-  if (n < 1) return 'Chọn ít nhất một phòng.';
-  if (n > LIMITS.maxRooms) return `Tối đa ${LIMITS.maxRooms} phòng, đang chọn ${n}.`;
+  if (n < 1) return t('Chọn ít nhất một phòng.');
+  if (n > LIMITS.maxRooms) return t('Tối đa {max} phòng, đang chọn {n}.', { max: LIMITS.maxRooms, n });
   return null;
 }
 

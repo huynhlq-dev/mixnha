@@ -10,8 +10,10 @@ export const THEMES: readonly Theme[] = ['light', 'dark', 'mono'];
 /** Khóa lưu lựa chọn giao diện. Đoạn script nhỏ ở đầu index.html và gallery.html đọc đúng khóa này. */
 export const THEME_KEY = 'xepnha2d:theme';
 
-/** Mặc định luôn là sáng, không theo cài đặt của máy. Chỉ khi người dùng bấm nút mới chuyển sang tối hoặc đọc sách. */
-export const parseTheme = (raw: string | null): Theme => (raw === 'dark' || raw === 'mono' ? raw : 'light');
+/** Giao diện khi chưa chọn gì: đọc sách (không màu), không theo cài đặt của máy. Lựa chọn đã lưu (kể cả sáng) luôn được giữ. */
+export const DEFAULT_THEME: Theme = 'mono';
+
+export const parseTheme = (raw: string | null): Theme => (raw === 'light' || raw === 'dark' || raw === 'mono' ? raw : DEFAULT_THEME);
 
 export const nextTheme = (current: Theme): Theme => THEMES[(THEMES.indexOf(current) + 1) % THEMES.length]!;
 
@@ -39,7 +41,7 @@ export function bindThemeToggle(btn: HTMLButtonElement, kv: KV, onChange?: (them
   const paint = (): void => {
     const next = nextTheme(current);
     root.dataset.theme = current;
-    // "bật" nghĩa là đang không ở giao diện sáng mặc định
+    // "bật" nghĩa là đang không ở giao diện sáng
     btn.setAttribute('aria-pressed', String(current !== 'light'));
     btn.setAttribute('aria-label', `${t('Đổi giao diện')}: ${themeLabel(next)}`);
     if (label) label.textContent = themeLabel(next);

@@ -13,21 +13,21 @@ function setup(saved?: string) {
 }
 
 describe('parseTheme', () => {
-  it('mặc định là sáng, chỉ "dark" mới là tối', () => {
-    expect(parseTheme(null)).toBe('light');
+  it('mặc định là đọc sách, lựa chọn đã lưu (kể cả sáng) được giữ', () => {
+    expect(parseTheme(null)).toBe('mono');
+    expect(parseTheme('auto')).toBe('mono');
+    expect(parseTheme('')).toBe('mono');
     expect(parseTheme('light')).toBe('light');
-    expect(parseTheme('auto')).toBe('light');
-    expect(parseTheme('')).toBe('light');
     expect(parseTheme('dark')).toBe('dark');
     expect(parseTheme('mono')).toBe('mono');
   });
 });
 
 describe('bindThemeToggle', () => {
-  it('chưa lưu gì thì giao diện sáng', () => {
+  it('chưa lưu gì thì giao diện đọc sách', () => {
     const { root, btn, onChange } = setup();
-    expect(root.dataset.theme).toBe('light');
-    expect(btn.getAttribute('aria-pressed')).toBe('false');
+    expect(root.dataset.theme).toBe('mono');
+    expect(btn.getAttribute('aria-pressed')).toBe('true');
     expect(onChange).not.toHaveBeenCalled();
   });
 
@@ -37,12 +37,18 @@ describe('bindThemeToggle', () => {
     expect(btn.getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('giá trị lạ trong kho thì quay về sáng', () => {
-    expect(setup('purple').root.dataset.theme).toBe('light');
+  it('giá trị lạ trong kho thì quay về đọc sách', () => {
+    expect(setup('purple').root.dataset.theme).toBe('mono');
+  });
+
+  it('đã chọn sáng thì giữ sáng', () => {
+    const { root, btn } = setup('light');
+    expect(root.dataset.theme).toBe('light');
+    expect(btn.getAttribute('aria-pressed')).toBe('false');
   });
 
   it('bấm thì chuyển sáng → tối → đọc sách → sáng, ghi nhớ và báo onChange', () => {
-    const { root, btn, kv, onChange } = setup();
+    const { root, btn, kv, onChange } = setup('light');
     btn.click();
     expect(root.dataset.theme).toBe('dark');
     expect(btn.getAttribute('aria-pressed')).toBe('true');
@@ -73,7 +79,7 @@ describe('bindThemeToggle', () => {
     const root = document.createElement('html');
     const btn = document.createElement('button');
     btn.innerHTML = '<svg data-theme-icon></svg><span data-theme-label></span>';
-    bindThemeToggle(btn, memoryKV(), undefined, root);
+    bindThemeToggle(btn, memoryKV({ [THEME_KEY]: 'light' }), undefined, root);
     const text = () => btn.querySelector('[data-theme-label]')!.textContent;
     expect(text()).toBe('Chế độ tối');
     expect(btn.querySelector('svg')!.innerHTML).toContain('path');
@@ -97,6 +103,6 @@ describe('bindThemeToggle', () => {
     const btn = document.createElement('button');
     bindThemeToggle(btn, { get: () => null, set: () => false, remove: () => {} }, undefined, root);
     btn.click();
-    expect(root.dataset.theme).toBe('dark');
+    expect(root.dataset.theme).toBe('light');
   });
 });

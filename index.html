@@ -10,8 +10,11 @@
     <script>
       // đặt giao diện đã chọn trước khi vẽ trang để không nháy sáng; cùng khóa với src/ui/theme.ts
       try {
-        document.documentElement.dataset.theme = ['dark', 'mono'].includes(localStorage.getItem('xepnha2d:theme')) ? localStorage.getItem('xepnha2d:theme') : 'light';
-      } catch (e) {}
+        var saved = localStorage.getItem('xepnha2d:theme');
+        document.documentElement.dataset.theme = ['light', 'dark', 'mono'].includes(saved) ? saved : 'mono';
+      } catch (e) {
+        document.documentElement.dataset.theme = 'mono';
+      }
     </script>
   </head>
   <body class="app">

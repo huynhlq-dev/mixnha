@@ -20,6 +20,7 @@ Xếp đồ nội thất cho căn hộ trên bản vẽ đúng tỉ lệ. Chạy
 - Trên máy tính, khung thiết kế tràn hết bề ngang và vừa khít chiều cao màn hình (không phải cuộn trang): bản vẽ 2D và khung 3D tự co giãn theo khung, hai cột bên cuộn riêng.
 - Dùng được trên điện thoại (thư viện dạng ngăn kéo, thanh nút dưới đáy, chạm và chụm hai ngón).
 - Trang **gallery** (`/gallery.html`): xem mọi món, kể cả món đang làm, ở cùng một tỉ lệ, kèm ảnh 3D và báo lỗi dữ liệu.
+- **Tiếng Việt và tiếng Anh**: nhóm nút **VI | EN** ở góc trên bên phải (cả trang thiết kế lẫn gallery; hộp thoại Dự án mới có thêm một nhóm nút vì hộp thoại chặn nút ngoài trang). Mặc định là tiếng Việt, không đoán theo trình duyệt; lựa chọn được nhớ (khóa `xepnha2d:lang`) và đổi ngay, không tải lại trang. Mọi chữ trên giao diện, thông báo, tên đồ, nhóm, loại phòng, cửa, màu, ghi chú, câu cảnh báo khi nhập file đều có bản tiếng Anh; số thập phân dùng dấu phẩy (Việt) hoặc dấu chấm (Anh). Tên phòng bạn tự đặt và nội dung ghi chú của bạn giữ nguyên. File `.json` xuất ra không phụ thuộc ngôn ngữ (tên phòng mặc định vẫn lưu bằng tiếng Việt, hiện ra theo ngôn ngữ đang chọn). Riêng báo lỗi kiểm tra dữ liệu đồ (`core/validate.ts`, dành cho người thêm đồ, hiện ở `npm run validate:items` và gallery) vẫn bằng tiếng Việt.
 
 ## Chạy
 
@@ -49,7 +50,8 @@ src/
     items/      Khai báo đồ, mỗi nhóm một file; index.ts gom lại (ALL_ITEMS)
     categories.ts  Nhóm đồ        rooms.ts  7 loại phòng, cửa, cửa sổ, lan can, bố trí mẫu; căn hộ mặc định
     palettes.ts    Màu sàn, tường, món   shapes.ts  Danh sách kiểu vẽ 3D   schema.ts  Các kiểu dữ liệu
-  core/       Hình học và luật, không biết gì về giao diện. Chỉ import data.
+  i18n/       Đa ngôn ngữ: index.ts (t, tn, ngôn ngữ đang dùng), en.ts (từ điển tiếng Anh), dom.ts (dịch phần HTML viết sẵn). Lớp nền, mọi tầng đều dùng được.
+  core/       Hình học và luật, không biết gì về giao diện. Chỉ import data (và i18n cho câu báo lỗi, dấu thập phân).
     geometry, measure, analyse (lối đi 60 cm, chồng lấn), layout (bản vẽ, khóa món, giới hạn),
     ops (các thao tác sửa: thêm, xoay, dịch, đổi số đo, khóa, bố trí mẫu), rooms (mã phòng, phòng mới theo loại, mã kéo thả), project (số phòng mỗi loại, dựng dự án mới), registry (tra món theo mã),
     validate (kiểm tra dữ liệu đồ), color, format, limits
@@ -61,10 +63,10 @@ src/
   styles/     CSS theo từng khu vực; tokens.css giữ màu và font. Mặc định nền sáng; nút "Chế độ tối" (ui/theme.ts)
               đặt data-theme="dark" trên <html> và nhớ lựa chọn trong trình duyệt (khóa xepnha2d:theme)
 tools/        validate-items.ts (lệnh kiểm tra dữ liệu), report.ts (định dạng kết quả)
-tests/        Test của core, data, storage, viewport, views 2D, scene 3D
+tests/        Test của core, data, storage, viewport, views 2D, scene 3D, i18n
 ```
 
-Quy tắc phụ thuộc: `data` → `core` → `storage` và `views` (không gọi nhau, trừ các module storage gọi nhau) → `ui` (được gọi tất cả). Các module `ui` khai báo giao diện hẹp mà chúng cần (`PropsApp`, `PenApp`, `SwatchApp`, `MobileApp`) và `App` đáp ứng, nên mỗi module kiểm thử riêng được.
+Quy tắc phụ thuộc: `i18n` (lớp nền, chỉ import kiểu `KV`) ← mọi tầng; `data` → `core` → `storage` và `views` (không gọi nhau, trừ các module storage gọi nhau) → `ui` (được gọi tất cả). Các module `ui` khai báo giao diện hẹp mà chúng cần (`PropsApp`, `PenApp`, `SwatchApp`, `MobileApp`) và `App` đáp ứng, nên mỗi module kiểm thử riêng được.
 
 Hai hàm vẽ lại: `render()` chỉ vẽ khung bản vẽ (dùng khi đang kéo), `refresh(continuous)` vẽ lại cả bảng thuộc tính rồi ghi Hoàn tác và lưu.
 
@@ -92,6 +94,7 @@ Thêm các thứ khác:
 - **Nhóm mới**: `src/data/categories.ts` (đồ gắn tường thêm `label3d` để hiện tên nhóm trong 3D).
 - **Loại phòng mới**: thêm id vào `ROOM_TYPE_IDS` và một mục trong `ROOMS` (`src/data/rooms.ts`: cỡ, màu, cửa đi, cửa sổ, bố trí mẫu). Loại mới tự có trong nhóm **Phòng** của thư viện; bố trí mẫu chỉ được dùng món `live`. Một phòng trong căn hộ là `RoomEntry { id, type, name }`: `type` chọn khai báo gốc, `id` là khóa bản vẽ (chữ thường, số, gạch ngang, tối đa 24 ký tự), `name` do người dùng đặt. `ROOM_IDS` / `DEFAULT_ROOMS` là bốn phòng của căn hộ mới và của dữ liệu cũ.
 - **Màu gợi ý**: `src/data/palettes.ts`.
+- **Chữ hiển thị mới** (tên đồ, nhóm, ghi chú, câu thông báo, chữ trong `index.html`): tiếng Việt vẫn viết thẳng trong code và dùng làm khóa. Câu trong code đi qua `t('...', { tham số })` (hoặc `tn(tên)` cho tên đồ, nhóm, phòng), rồi thêm bản tiếng Anh vào `src/i18n/en.ts` cùng khóa; câu có `{n}` viết "số ít|số nhiều". `tests/i18n.test.ts` báo thiếu hoặc thừa bản dịch (quét `t('...')` trong `src/`, chữ trong `index.html` / `gallery.html` và dữ liệu đồ).
 - **Đổi định dạng file lưu**: thêm `src/storage/migrations/vN-to-vM.ts`, đăng ký trong `migrations/index.ts` và tăng `CURRENT_VER`. Không sửa migration cũ.
 
 ## Dữ liệu và file
@@ -130,7 +133,7 @@ Các điểm này nên cập nhật lại trong trang design:
 
 ## Test
 
-`npm test` chạy 467 test cho `core` (cả thêm, xóa, dời cửa đi, cửa sổ và hướng mở cánh), `data` (cả kiểm tra dữ liệu đồ, các loại cửa và bố trí mẫu), `storage` (lưu, file, migrations, Hoàn tác, nhắc sao lưu, cửa trong file), `viewport` (vùng nhìn, phóng to, kéo, bay vùng nhìn khi zoom), `apartment` (mô hình cả căn: xếp phòng, dời, đổi cỡ, chỗ đặt phòng mới, không chồng nhau), `rooms` (loại phòng, mã phòng, phòng mới), `project` (số phòng mỗi loại, dựng dự án mới), `interior` (diện tích trong nhà, hành lang), `overlap` (phòng chồng nhau: thứ tự lớp, phần còn thấy, giới hạn che), `balcony` (ban công, lan can, nhóm đồ ban công), `ui/newProject` (hộp thoại Dự án mới), `views` 2D, `scene3d`, `ui/theme` (đổi giao diện sáng, tối), `ui/keys` (phím tắt), `ui/library` (thư viện đồ dạng chọn nhóm), `ui/pen` (bút màu) và `ui/fullscreen` (toàn màn hình). Trình duyệt thật đã được thử thủ công bằng Playwright (kéo thả, phím tắt, khóa, xuất / nhập, 3D, giao diện điện thoại).
+`npm test` chạy 491 test cho `core` (cả thêm, xóa, dời cửa đi, cửa sổ và hướng mở cánh), `data` (cả kiểm tra dữ liệu đồ, các loại cửa và bố trí mẫu), `storage` (lưu, file, migrations, Hoàn tác, nhắc sao lưu, cửa trong file), `viewport` (vùng nhìn, phóng to, kéo, bay vùng nhìn khi zoom), `apartment` (mô hình cả căn: xếp phòng, dời, đổi cỡ, chỗ đặt phòng mới, không chồng nhau), `rooms` (loại phòng, mã phòng, phòng mới), `project` (số phòng mỗi loại, dựng dự án mới), `interior` (diện tích trong nhà, hành lang), `overlap` (phòng chồng nhau: thứ tự lớp, phần còn thấy, giới hạn che), `balcony` (ban công, lan can, nhóm đồ ban công), `ui/newProject` (hộp thoại Dự án mới), `views` 2D, `scene3d`, `ui/theme` (đổi giao diện sáng, tối), `ui/keys` (phím tắt), `ui/library` (thư viện đồ dạng chọn nhóm), `ui/pen` (bút màu) và `ui/fullscreen` (toàn màn hình) và `i18n` (từ điển đủ và đúng khuôn, `t` / `tn`, dịch HTML tĩnh, nút VI | EN, chữ do code sinh ra bằng tiếng Anh). Trình duyệt thật đã được thử thủ công bằng Playwright (kéo thả, phím tắt, khóa, xuất / nhập, 3D, giao diện điện thoại).
 
 **Chưa có test** cho: các hàm sửa món trong `core/ops.ts` (thêm, xoay, dịch, đổi số đo, khóa; riêng phần cửa đã có test), các module `ui/` (nav, remind, bảng thuộc tính, hộp thoại xuất / nhập, `App`), kéo cửa bằng chuột trong `views/stage2d.ts` (đã thử thủ công trên trình duyệt thật; các hàm tính vị trí kéo thì có test), `gallery/` và `tools/report.ts`. Nên bổ sung khi sửa các phần đó; chúng đều viết dạng hàm thuần hoặc có giao diện hẹp nên dễ kiểm thử.
 

@@ -39,6 +39,7 @@ import type { WallKey } from '../data/schema';
 import type { DropAt, Host, PenTarget } from './host';
 import { shapeFor } from './shapes';
 import { addBox, shade } from './shapes/util';
+import { t } from '../i18n';
 
 /** Gắn vào đối tượng 3D để biết con trỏ đang chạm vào cái gì. */
 type Tag = { t: 'floor' } | { t: 'wall'; wl: WallKey } | { t: 'item'; sel: Selection } | { t: 'rot' };
@@ -81,8 +82,8 @@ function cssColor(name: string, fallback: string): Color {
 
 function tagOf(o: Object3D | null): Tag | null {
   for (let cur: Object3D | null = o; cur; cur = cur.parent) {
-    const t = cur.userData?.tg as Tag | undefined;
-    if (t) return t;
+    const tag = cur.userData?.tg as Tag | undefined;
+    if (tag) return tag;
   }
   return null;
 }
@@ -275,7 +276,7 @@ export class Scene3D {
     try {
       r = new WebGLRenderer({ antialias: true });
     } catch {
-      this.fail('Trình duyệt này không bật WebGL nên chưa xem được 3D.');
+      this.fail(t('Trình duyệt này không bật WebGL nên chưa xem được 3D.'));
       return;
     }
     r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -780,7 +781,7 @@ export class Scene3D {
     if (d.key === 'locked') {
       if (!d.told && this.downAt && Math.hypot(e.clientX - this.downAt.x, e.clientY - this.downAt.y) >= CLICK_SLOP) {
         d.told = true;
-        this.host.notice('Món này đã khóa nên không kéo được. Mở khóa ở bảng bên phải nếu muốn di chuyển.');
+        this.host.notice(t('Món này đã khóa nên không kéo được. Mở khóa ở bảng bên phải nếu muốn di chuyển.'));
       }
       return;
     }
@@ -848,7 +849,7 @@ export class Scene3D {
     if (this.host.view().overview) {
       // 3D cả căn hộ chỉ để xem: chỉ nhận loại phòng (thêm phòng mới), đồ thì phải thả ở mặt bằng
       if (roomTypeFromDragId(id)) this.host.drop(id, null);
-      else this.host.notice('Muốn thêm đồ, hãy chuyển sang Mặt bằng hoặc zoom vào một phòng.');
+      else this.host.notice(t('Muốn thêm đồ, hãy chuyển sang Mặt bằng hoặc zoom vào một phòng.'));
       return;
     }
     const def = this.host.registry.resolve(id);

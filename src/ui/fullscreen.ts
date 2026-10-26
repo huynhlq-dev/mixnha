@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 /**
  * Toàn màn hình cho cả trình thiết kế, ở mặt bằng, mặt đứng và 3D: khung soạn thảo phủ kín màn hình, vẫn có thanh công cụ,
  * thư viện bên trái và bảng chỉnh sửa bên phải; đầu trang, nhắc sao lưu và chân trang được ẩn (lớp "fs" trên <body>, xem editor.css).
@@ -35,7 +36,7 @@ export class Fullscreen {
     if (on) this.scrollY = window.scrollY;
     this.body.classList.toggle('fs', on);
     this.btn.setAttribute('aria-pressed', String(on));
-    this.label.textContent = on ? 'Thoát toàn màn hình' : 'Toàn màn hình';
+    this.label.textContent = on ? t('Thoát toàn màn hình') : t('Toàn màn hình');
     document.documentElement.style.overflow = on ? 'hidden' : '';
     if (on) {
       try {

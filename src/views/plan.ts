@@ -11,6 +11,7 @@ import type { DoorItem, FloorItem, Layout, OpeningKind, OpeningSel, Selection } 
 import type { OpeningDef, WallKey } from '../data/schema';
 import { MARGIN, type Frame } from './frame';
 import { edgeTag, gridLines, hdim, HALO, lockGlyph, n2, openingLabel, openingOpen, pickLabel, vdim } from './svg';
+import { t, tn } from '../i18n';
 
 export interface PlanInput {
   layout: Layout;
@@ -209,7 +210,7 @@ export function renderPlan(i: PlanInput): Frame {
     const short = reg.resolve(it.id)?.short;
     const lock = it.locked ? lockGlyph(-it.w / 2 + 9, -it.d / 2 + 9, it.rot) : '';
     o.push(
-      `<g class="it" data-uid="${it.uid}" tabindex="0" role="button" aria-label="${escapeHtml(it.name)}, ${fm(it.w)} x ${fm(it.d)} cm${it.locked ? ', đã khóa' : ''}" transform="translate(${n2(it.x)} ${n2(it.y)}) rotate(${n2(it.rot)})" style="cursor:${it.locked ? 'pointer' : 'move'}">` +
+      `<g class="it" data-uid="${it.uid}" tabindex="0" role="button" aria-label="${escapeHtml(t('{name}, {w} x {d} cm', { name: tn(it.name), w: fm(it.w), d: fm(it.d) }))}${it.locked ? escapeHtml(t(', đã khóa')) : ''}" transform="translate(${n2(it.x)} ${n2(it.y)}) rotate(${n2(it.rot)})" style="cursor:${it.locked ? 'pointer' : 'move'}">` +
         `<rect x="${-it.w / 2}" y="${-it.d / 2}" width="${it.w}" height="${it.d}" rx="3" style="fill:${it.color};fill-opacity:${it.z === 0 ? 0.8 : 1};stroke:${stroke};stroke-width:${sw}"${it.z === 0 ? ' stroke-dasharray="6 4"' : ''}/>` +
         `<g transform="rotate(${n2(-it.rot)})">${itemLabel(it, box, short, dim, tc)}</g>${lock}</g>`,
     );
@@ -256,27 +257,27 @@ export function renderPlan(i: PlanInput): Frame {
   let text: string;
   if (overlap.size > 0) {
     tone = 'bad';
-    text = 'Cửa đi hoặc cửa sổ đang chồng lên nhau (viền cam), hãy dời ra xa nhau.';
+    text = t('Cửa đi hoặc cửa sổ đang chồng lên nhau (viền cam), hãy dời ra xa nhau.');
   } else if (nbad > 0) {
     tone = 'bad';
-    text = `${nbad} món đang chồng lấn, nằm ngoài phòng hoặc chắn vùng mở cửa (nét đứt).`;
+    text = t('{n} món đang chồng lấn, nằm ngoài phòng hoặc chắn vùng mở cửa (nét đứt).', { n: nbad });
   } else if (info.gap && info.gap.dist < MIN_LANE) {
     tone = 'bad';
-    text = `Lối đi giữa ${info.gap.a} và ${info.gap.b} chỉ rộng ${fm(info.gap.dist)} cm. Nên chừa từ ${MIN_LANE} cm.`;
+    text = t('Lối đi giữa {a} và {b} chỉ rộng {dist} cm. Nên chừa từ {min} cm.', { a: tn(info.gap.a), b: tn(info.gap.b), dist: fm(info.gap.dist), min: MIN_LANE });
   } else if (info.gap) {
-    text = `Không chồng lấn. Lối đi hẹp nhất là ${fm(info.gap.dist)} cm, giữa ${info.gap.a} và ${info.gap.b}.`;
+    text = t('Không chồng lấn. Lối đi hẹp nhất là {dist} cm, giữa {a} và {b}.', { dist: fm(info.gap.dist), a: tn(info.gap.a), b: tn(info.gap.b) });
   } else {
-    text = 'Không chồng lấn.';
+    text = t('Không chồng lấn.');
   }
 
   return {
     bounds: { x: -margin('L'), y: -margin('T'), w: W + margin('L') + margin('R'), h: H + margin('T') + margin('B') },
-    aria: `Mặt bằng ${R.name} ${W} x ${H} cm, ${L.items.length} món đồ`,
+    aria: t('Mặt bằng {room} {W} x {H} cm, {n} món đồ', { room: tn(R.name), W, H, n: L.items.length }),
     svg: o.join(''),
-    title: R.name,
+    title: tn(R.name),
     size: `${W} × ${H} cm`,
     area: `${fm((W * H) / 10000)} m²`,
-    status: { tone, text: `${text} Đồ chiếm ${info.pct}% diện tích sàn.` },
+    status: { tone, text: `${text} ${t('Đồ chiếm {pct}% diện tích sàn.', { pct: info.pct })}` },
   };
 }
 

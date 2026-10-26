@@ -4,6 +4,7 @@ import type { Layout } from '../core/types';
 import type { PenTarget, PenTool } from '../views/host';
 import type { Els } from './els';
 import { recentHtml } from './swatches';
+import { t } from '../i18n';
 
 export const MAX_RECENT = 8;
 
@@ -21,9 +22,9 @@ export function penShown(hasSel: boolean, tool: PenTool): boolean {
 }
 
 export function penHint(tool: PenTool): string {
-  if (tool === 'pick') return 'Bấm vào một món, sàn hoặc tường để hút màu của nó. Xong bút tự chuyển sang chấm màu.';
-  if (tool === 'paint') return 'Bấm vào món, sàn hoặc tường để chấm màu này. Bấm Esc hoặc bấm lại nút để thoát.';
-  return 'Chọn Lấy màu để hút màu từ bản vẽ, hoặc Chấm màu để tô nhanh bằng màu đang chọn.';
+  if (tool === 'pick') return t('Bấm vào một món, sàn hoặc tường để hút màu của nó. Xong bút tự chuyển sang chấm màu.');
+  if (tool === 'paint') return t('Bấm vào món, sàn hoặc tường để chấm màu này. Bấm Esc hoặc bấm lại nút để thoát.');
+  return t('Chọn Lấy màu để hút màu từ bản vẽ, hoặc Chấm màu để tô nhanh bằng màu đang chọn.');
 }
 
 /** Màu hiện tại của chỗ mà bút chạm vào, hoặc null nếu không tìm thấy món. */

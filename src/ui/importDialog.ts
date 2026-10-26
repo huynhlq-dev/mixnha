@@ -3,6 +3,7 @@ import type { Registry } from '../core/registry';
 import { checkFileSize, parseDesignFile, type ImportedRoom, type ParsedFile, type ParseResult } from '../storage/file';
 import { openDialog } from './dialog';
 import type { Els } from './els';
+import { getLang, t, tn } from '../i18n';
 
 export interface ImportDeps {
   registry: Registry;
@@ -15,32 +16,33 @@ type ImportEls = Pick<Els, 'dlgImport' | 'imDrop' | 'imPick' | 'imPasteToggle' |
 /** "2026-10-20T10:05:00+07:00" → "20/10/2026 10:05". Giữ đúng giờ ghi trong file. Không đọc được thì trả về null. */
 export function formatExportedAt(iso: string | null): string | null {
   const m = iso ? /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso) : null;
-  return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}` : null;
+  if (!m) return null;
+  return getLang() === 'en' ? `${m[1]}-${m[2]}-${m[3]} ${m[4]}:${m[5]}` : `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}`;
 }
 
 /** Phần xem trước của một file hợp lệ: tên, ngày xuất, ghi chú, từng phòng có ô tích, cảnh báo. */
 export function previewHtml(f: ParsedFile): string {
   const items = f.rooms.reduce((n, r) => n + r.itemCount, 0);
   const when = formatExportedAt(f.exportedAt);
-  const head = `${when ? `Xuất ${when} · ` : ''}${f.rooms.length} phòng · ${items} món`;
+  const head = [when ? t('Xuất {when}', { when }) : '', t('{n} phòng', { n: f.rooms.length }), t('{n} món', { n: items })].filter(Boolean).join(' · ');
   const rows = f.rooms
     .map(
       (r) =>
-        `<div class="rrow"><label><input type="checkbox" data-room="${escapeHtml(r.id)}" checked>${escapeHtml(r.entry.name)}</label><span class="meta">${r.layout.W} × ${r.layout.H} · ${r.itemCount} món</span></div>`,
+        `<div class="rrow"><label><input type="checkbox" data-room="${escapeHtml(r.id)}" checked>${escapeHtml(tn(r.entry.name))}</label><span class="meta">${r.layout.W} × ${r.layout.H} · ${t('{n} món', { n: r.itemCount })}</span></div>`,
     )
     .join('');
   const warns = f.warnings.length ? `<ul class="warns">${f.warnings.map((w) => `<li>${escapeHtml(w.message)}</li>`).join('')}</ul>` : '';
   return (
-    `<div class="okline">File hợp lệ</div>` +
-    `<div class="prev"><b>${escapeHtml(f.name || 'Bản thiết kế không tên')}</b><span class="meta">${escapeHtml(head)}</span>` +
+    `<div class="okline">${t('File hợp lệ')}</div>` +
+    `<div class="prev"><b>${escapeHtml(f.name || t('Bản thiết kế không tên'))}</b><span class="meta">${escapeHtml(head)}</span>` +
     (f.note ? `<span class="meta">"${escapeHtml(f.note)}"</span>` : '') +
     `${rows}</div>${warns}` +
-    `<div class="meta">Phòng đã chọn sẽ được thay bằng bản trong file; phòng chưa có trong căn hộ thì được thêm vào. Bạn vẫn Hoàn tác được.</div>`
+    `<div class="meta">${t('Phòng đã chọn sẽ được thay bằng bản trong file; phòng chưa có trong căn hộ thì được thêm vào. Bạn vẫn Hoàn tác được.')}</div>`
   );
 }
 
 export function errorHtml(e: { title: string; message: string; detail?: string }): string {
-  return `<div class="errline">${escapeHtml(e.title)}</div><div>${escapeHtml(e.message)}</div>${e.detail ? `<div class="meta">Chi tiết: ${escapeHtml(e.detail)}</div>` : ''}`;
+  return `<div class="errline">${escapeHtml(e.title)}</div><div>${escapeHtml(e.message)}</div>${e.detail ? `<div class="meta">${escapeHtml(t('Chi tiết: {detail}', { detail: e.detail }))}</div>` : ''}`;
 }
 
 /** Hộp thoại Nhập bản thiết kế: chọn file, kéo thả hoặc dán nội dung; kiểm tra xong mới cho tick phòng và nhập. */
@@ -93,7 +95,7 @@ export class ImportDialog {
     els.imPaste.hidden = true;
     els.imPasteToggle.setAttribute('aria-expanded', 'false');
     els.imApply.disabled = true;
-    els.imApply.textContent = 'Nhập';
+    els.imApply.textContent = t('Nhập');
     openDialog(els.dlgImport);
   }
 
@@ -139,7 +141,7 @@ export class ImportDialog {
     try {
       this.show(parseDesignFile(await f.text(), this.deps.registry));
     } catch {
-      this.show({ ok: false, error: { code: 'invalid', title: 'Không đọc được file này', message: 'Trình duyệt không đọc được file này. Hãy thử chọn lại file, hoặc dùng mục dán nội dung.' } });
+      this.show({ ok: false, error: { code: 'invalid', title: t('Không đọc được file này'), message: t('Trình duyệt không đọc được file này. Hãy thử chọn lại file, hoặc dùng mục dán nội dung.') } });
     }
   }
 
@@ -153,7 +155,7 @@ export class ImportDialog {
     } else {
       this.parsed = null;
       els.imResult.innerHTML = errorHtml(res.error);
-      els.imApply.textContent = 'Chọn file khác';
+      els.imApply.textContent = t('Chọn file khác');
       els.imApply.disabled = false;
     }
   }
@@ -168,7 +170,7 @@ export class ImportDialog {
   private syncApply(): void {
     const n = this.chosen().length;
     this.els.imApply.disabled = n === 0;
-    this.els.imApply.textContent = n === 0 ? 'Chưa chọn phòng nào' : `Nhập ${n} phòng`;
+    this.els.imApply.textContent = n === 0 ? t('Chưa chọn phòng nào') : t('Nhập {n} phòng', { n });
   }
 
   private apply(): void {

@@ -4,6 +4,7 @@ import { LIMITS } from './limits';
 import type { Registry } from './registry';
 import { newRoomEntry, roomDef } from './rooms';
 import type { Layouts } from './types';
+import { t } from '../i18n';
 
 /** Số phòng mỗi loại. Loại không ghi thì là 0. */
 export type RoomCounts = Partial<Record<RoomTypeId, number>>;
@@ -37,8 +38,8 @@ export function totalArea(counts: RoomCounts): number {
 /** Thông báo lỗi nếu chưa tạo được dự án (ít nhất 1, nhiều nhất LIMITS.maxRooms phòng), không thì null. */
 export function countsError(counts: RoomCounts): string | null {
   const n = totalRooms(counts);
-  if (n < 1) return 'Chọn ít nhất một phòng.';
-  if (n > LIMITS.maxRooms) return `Tối đa ${LIMITS.maxRooms} phòng, đang chọn ${n}.`;
+  if (n < 1) return t('Chọn ít nhất một phòng.');
+  if (n > LIMITS.maxRooms) return t('Tối đa {max} phòng, đang chọn {n}.', { max: LIMITS.maxRooms, n });
   return null;
 }
 

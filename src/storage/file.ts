@@ -9,6 +9,7 @@ import type { WallKey } from '../data/schema';
 import { WALL_KEYS } from '../data/walls';
 import { CURRENT_VER, migrate, type RawDoc } from './migrations';
 import { cleanText, FIELD_LIMITS, sanitizeApt, sanitizeRoom, sanitizeRoomList, Tally, type ImportWarning } from './sanitize';
+import { t } from '../i18n';
 
 export { cleanText } from './sanitize';
 export type { ImportWarning, WarningCode } from './sanitize';
@@ -196,20 +197,20 @@ export interface ImportError {
 
 export type ParseResult = { ok: true; file: ParsedFile } | { ok: false; error: ImportError };
 
-const GENERIC_BAD = 'File không phải bản thiết kế của trang này, hoặc đã bị sửa làm hỏng. Hãy xin người gửi xuất lại, hoặc chọn file khác. Bản vẽ của bạn chưa bị thay đổi.';
+const genericBad = (): string => t('File không phải bản thiết kế của trang này, hoặc đã bị sửa làm hỏng. Hãy xin người gửi xuất lại, hoặc chọn file khác. Bản vẽ của bạn chưa bị thay đổi.');
 
 function failure(code: ImportErrorCode, title: string, message: string, detail?: string): ParseResult {
   return { ok: false, error: { code, title, message, ...(detail ? { detail } : {}) } };
 }
 
-const bad = (detail: string): ParseResult => failure('invalid', 'Không đọc được file này', GENERIC_BAD, detail);
+const bad = (detail: string): ParseResult => failure('invalid', t('Không đọc được file này'), genericBad(), detail);
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /** File lớn hơn mức cho phép thì báo lỗi, để giao diện từ chối ngay cả khi chưa đọc nội dung. */
 export function checkFileSize(bytes: number): ParseResult | null {
   if (bytes <= FILE_LIMITS.maxBytes) return null;
-  return failure('too-large', 'File quá lớn', `File lớn hơn ${FILE_LIMITS.maxBytes / 1024 / 1024} MB nên trang không nhập. Một bản thiết kế bình thường chỉ vài chục KB.`);
+  return failure('too-large', t('File quá lớn'), t('File lớn hơn {mb} MB nên trang không nhập. Một bản thiết kế bình thường chỉ vài chục KB.', { mb: FILE_LIMITS.maxBytes / 1024 / 1024 }));
 }
 
 /** Kiểm tra và đọc nội dung file. Hàm dùng chung cho chọn file, kéo thả và dán nội dung. */
@@ -220,15 +221,15 @@ export function parseDesignFile(text: string, reg: Registry): ParseResult {
   try {
     json = JSON.parse(text);
   } catch {
-    return failure('not-json', 'Không đọc được file này', GENERIC_BAD, 'không phải định dạng JSON');
+    return failure('not-json', t('Không đọc được file này'), genericBad(), t('không phải định dạng JSON'));
   }
-  if (!isObj(json)) return bad('nội dung không phải một đối tượng JSON');
-  if (json.app !== FILE_APP) return bad('thiếu hoặc sai trường "app"');
-  if (typeof json.ver !== 'number' || !Number.isInteger(json.ver) || json.ver < 1) return bad('thiếu hoặc sai trường "ver"');
-  if (!isObj(json.rooms)) return bad('thiếu trường "rooms"');
-  if (json.units !== undefined && json.units !== 'cm') return bad('đơn vị không phải "cm"');
+  if (!isObj(json)) return bad(t('nội dung không phải một đối tượng JSON'));
+  if (json.app !== FILE_APP) return bad(t('thiếu hoặc sai trường "app"'));
+  if (typeof json.ver !== 'number' || !Number.isInteger(json.ver) || json.ver < 1) return bad(t('thiếu hoặc sai trường "ver"'));
+  if (!isObj(json.rooms)) return bad(t('thiếu trường "rooms"'));
+  if (json.units !== undefined && json.units !== 'cm') return bad(t('đơn vị không phải "cm"'));
   if (json.ver > CURRENT_VER) {
-    return failure('newer', 'File tạo từ bản mới hơn', 'File này được tạo bằng một phiên bản mới hơn của trang. Hãy tải lại trang để cập nhật rồi thử lại.', `phiên bản file ${json.ver}, trang hiểu tới ${CURRENT_VER}`);
+    return failure('newer', t('File tạo từ bản mới hơn'), t('File này được tạo bằng một phiên bản mới hơn của trang. Hãy tải lại trang để cập nhật rồi thử lại.'), t('phiên bản file {file}, trang hiểu tới {page}', { file: json.ver, page: CURRENT_VER }));
   }
 
   const { doc } = migrate(json as RawDoc);
@@ -247,13 +248,13 @@ export function parseDesignFile(text: string, reg: Registry): ParseResult {
     const res = sanitizeRoom(value, roomDef(entry), reg, tally);
     if (!res.ok) {
       if (res.code === 'too-many') {
-        return failure('too-many', 'File có quá nhiều món', `Một phòng trong file có nhiều hơn ${LIMITS.maxItemsPerRoom} món. Trang không nhập file này để tránh bị chậm.`, res.detail);
+        return failure('too-many', t('File có quá nhiều món'), t('Một phòng trong file có nhiều hơn {max} món. Trang không nhập file này để tránh bị chậm.', { max: LIMITS.maxItemsPerRoom }), res.detail);
       }
       return bad(res.detail);
     }
     rooms.push({ id: entry.id, entry, layout: res.layout, itemCount: countItems(res.layout) });
   }
-  if (!rooms.length) return bad('không có phòng nào dùng được trong "rooms"');
+  if (!rooms.length) return bad(t('không có phòng nào dùng được trong "rooms"'));
   // thứ tự như trong roomList; file cũ thì theo thứ tự loại phòng
   const order = (id: RoomId): number => {
     const i = listed ? listed.findIndex((e) => e.id === id) : ROOM_TYPE_IDS.indexOf(id as never);

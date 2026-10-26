@@ -10,6 +10,7 @@ import { isRoomIdString, isRoomTypeId, MAX_ROOM_NAME } from '../core/rooms';
 import { ROOMS, type RoomEntry, type RoomId } from '../data/rooms';
 import type { OpeningDef, RoomDef, WallKey } from '../data/schema';
 import { WALL_KEYS } from '../data/walls';
+import { t } from '../i18n';
 
 /**
  * Làm sạch dữ liệu bố trí từ nguồn không tin được: file người khác gửi, hoặc dữ liệu lưu trong trình duyệt.
@@ -65,14 +66,14 @@ export class Tally {
   }
   list(): ImportWarning[] {
     const text: Record<WarningCode, (n: number) => string> = {
-      'room-clamped': (n) => `${n} số đo của phòng nằm ngoài khoảng cho phép nên đã chỉnh về giá trị gần nhất.`,
-      'item-clamped': (n) => `${n} số đo hoặc vị trí của món nằm ngoài khoảng hợp lý nên đã chỉnh lại.`,
-      'color-reset': (n) => `${n} màu không hợp lệ nên đã dùng màu mặc định.`,
-      'items-dropped': (n) => `${n} món bị bỏ vì thiếu thông tin cần thiết (kích thước, vị trí) hoặc không đúng loại đặt.`,
-      'unknown-room': (n) => `${n} phòng trong file không có trong trang này nên bị bỏ qua.`,
-      'custom-items': (n) => `${n} món không có trong thư viện, giữ theo kích thước ghi trong file (món tùy chỉnh).`,
-      replaced: (n) => `${n} món đã ngừng dùng, được thay bằng món mới trong thư viện.`,
-      'openings-fixed': (n) => `${n} cửa đi hoặc cửa sổ có tường, vị trí hoặc số đo không hợp lệ nên đã chỉnh lại hoặc bỏ qua.`,
+      'room-clamped': (n) => t('{n} số đo của phòng nằm ngoài khoảng cho phép nên đã chỉnh về giá trị gần nhất.', { n }),
+      'item-clamped': (n) => t('{n} số đo hoặc vị trí của món nằm ngoài khoảng hợp lý nên đã chỉnh lại.', { n }),
+      'color-reset': (n) => t('{n} màu không hợp lệ nên đã dùng màu mặc định.', { n }),
+      'items-dropped': (n) => t('{n} món bị bỏ vì thiếu thông tin cần thiết (kích thước, vị trí) hoặc không đúng loại đặt.', { n }),
+      'unknown-room': (n) => t('{n} phòng trong file không có trong trang này nên bị bỏ qua.', { n }),
+      'custom-items': (n) => t('{n} món không có trong thư viện, giữ theo kích thước ghi trong file (món tùy chỉnh).', { n }),
+      replaced: (n) => t('{n} món đã ngừng dùng, được thay bằng món mới trong thư viện.', { n }),
+      'openings-fixed': (n) => t('{n} cửa đi hoặc cửa sổ có tường, vị trí hoặc số đo không hợp lệ nên đã chỉnh lại hoặc bỏ qua.', { n }),
     };
     return [...this.m.entries()].map(([code, count]) => ({ code, count, message: text[code](count) }));
   }
@@ -80,39 +81,39 @@ export class Tally {
 
 /* ---------- Từng giá trị ---------- */
 
-function clampSize(v: number, t: Tally): number {
+function clampSize(v: number, tally: Tally): number {
   const c = clamp(v, LIMITS.itemSize.min, LIMITS.itemSize.max);
-  if (c !== v) t.add('item-clamped');
+  if (c !== v) tally.add('item-clamped');
   return c;
 }
 
-function clampCoord(v: number, t: Tally): number {
+function clampCoord(v: number, tally: Tally): number {
   const c = clamp(v, -FIELD_LIMITS.maxCoord, FIELD_LIMITS.maxCoord);
-  if (c !== v) t.add('item-clamped');
+  if (c !== v) tally.add('item-clamped');
   return c;
 }
 
 /** Không ghi màu thì dùng màu mặc định, im lặng. Có ghi mà sai mã thì dùng màu mặc định và báo. */
-function colorOr(raw: unknown, fallback: string, t: Tally): string {
+function colorOr(raw: unknown, fallback: string, tally: Tally): string {
   const dflt = normHex(fallback) ?? fallback;
   if (raw === undefined || raw === null) return dflt;
   const c = normHex(raw);
   if (c) return c;
-  t.add('color-reset');
+  tally.add('color-reset');
   return dflt;
 }
 
 /* ---------- Từng món ---------- */
 
-function sanitizeFloor(raw: unknown, reg: Registry, t: Tally): FloorItem | null {
+function sanitizeFloor(raw: unknown, reg: Registry, tally: Tally): FloorItem | null {
   if (!isObj(raw) || typeof raw.id !== 'string' || !raw.id || raw.id.length > FIELD_LIMITS.maxId) {
-    t.add('items-dropped');
+    tally.add('items-dropped');
     return null;
   }
   const fileId = raw.id;
   const def = reg.resolve(fileId);
   if (def && def.place !== 'floor') {
-    t.add('items-dropped');
+    tally.add('items-dropped');
     return null;
   }
   const name = def ? def.name : cleanText(raw.name, FIELD_LIMITS.maxItemName);
@@ -121,23 +122,23 @@ function sanitizeFloor(raw: unknown, reg: Registry, t: Tally): FloorItem | null 
   const x = num(raw.x);
   const y = num(raw.y);
   if (!name || w === null || d === null || x === null || y === null) {
-    t.add('items-dropped');
+    tally.add('items-dropped');
     return null;
   }
-  w = clampSize(w, t);
-  d = clampSize(d, t);
-  if (def && def.id !== fileId) t.add('replaced');
-  if (!def) t.add('custom-items');
+  w = clampSize(w, tally);
+  d = clampSize(d, tally);
+  if (def && def.id !== fileId) tally.add('replaced');
+  if (!def) tally.add('custom-items');
   const item: FloorItem = {
     uid: 0,
     id: def ? def.id : fileId,
     name,
     w,
     d,
-    x: clampCoord(x, t),
-    y: clampCoord(y, t),
+    x: clampCoord(x, tally),
+    y: clampCoord(y, tally),
     rot: normDeg(r1(num(raw.rot) ?? 0)),
-    color: colorOr(raw.color, def?.color ?? FALLBACK_ITEM_COLOR, t),
+    color: colorOr(raw.color, def?.color ?? FALLBACK_ITEM_COLOR, tally),
     z: def ? (def.layer === 'under' ? 0 : 1) : raw.z === 0 ? 0 : 1,
   };
   if (!def) {
@@ -148,15 +149,15 @@ function sanitizeFloor(raw: unknown, reg: Registry, t: Tally): FloorItem | null 
   return item;
 }
 
-function sanitizeWall(raw: unknown, reg: Registry, t: Tally): WallItem | null {
+function sanitizeWall(raw: unknown, reg: Registry, tally: Tally): WallItem | null {
   if (!isObj(raw) || typeof raw.id !== 'string' || !raw.id || raw.id.length > FIELD_LIMITS.maxId) {
-    t.add('items-dropped');
+    tally.add('items-dropped');
     return null;
   }
   const fileId = raw.id;
   const def = reg.resolve(fileId);
   if (def && def.place !== 'wall') {
-    t.add('items-dropped');
+    tally.add('items-dropped');
     return null;
   }
   const name = def ? def.name : cleanText(raw.name, FIELD_LIMITS.maxItemName);
@@ -165,24 +166,24 @@ function sanitizeWall(raw: unknown, reg: Registry, t: Tally): WallItem | null {
   const x = num(raw.x);
   const y = num(raw.y) ?? (def ? (def.y ?? 0) : null);
   if (!name || w === null || h === null || x === null || y === null) {
-    t.add('items-dropped');
+    tally.add('items-dropped');
     return null;
   }
-  w = clampSize(w, t);
-  h = clampSize(h, t);
+  w = clampSize(w, tally);
+  h = clampSize(h, tally);
   const yy = clamp(y, LIMITS.itemY.min, LIMITS.itemY.max);
-  if (yy !== y) t.add('item-clamped');
-  if (def && def.id !== fileId) t.add('replaced');
-  if (!def) t.add('custom-items');
+  if (yy !== y) tally.add('item-clamped');
+  if (def && def.id !== fileId) tally.add('replaced');
+  if (!def) tally.add('custom-items');
   const item: WallItem = {
     uid: 0,
     id: def ? def.id : fileId,
     name,
     w,
     h,
-    x: clampCoord(x, t),
+    x: clampCoord(x, tally),
     y: yy,
-    color: colorOr(raw.color, def?.color ?? FALLBACK_ITEM_COLOR, t),
+    color: colorOr(raw.color, def?.color ?? FALLBACK_ITEM_COLOR, tally),
   };
   if (!def) {
     const d = num(raw.d);
@@ -209,22 +210,22 @@ interface RoomBox {
 }
 
 /** Một cửa đi hoặc cửa sổ trong file. Sai tường hoặc thiếu số thì bỏ; số ngoài khoảng thì kéo vào gọn trong tường. */
-function cleanOpening(raw: unknown, room: RoomBox, t: Tally): (OpeningDef & { uid: number }) | null {
+function cleanOpening(raw: unknown, room: RoomBox, tally: Tally): (OpeningDef & { uid: number }) | null {
   const pos = isObj(raw) ? num(raw.pos) : null;
   const w = isObj(raw) ? num(raw.w) : null;
   if (!isObj(raw) || !isWall(raw.wall) || pos === null || w === null) {
-    t.add('openings-fixed');
+    tally.add('openings-fixed');
     return null;
   }
   const asked = { uid: 0, wall: raw.wall, pos: Math.round(pos), w: Math.round(w) };
   const fitted = fitOpening(asked, room.W, room.H);
-  if (fitted.pos !== asked.pos || fitted.w !== asked.w) t.add('openings-fixed');
+  if (fitted.pos !== asked.pos || fitted.w !== asked.w) tally.add('openings-fixed');
   return fitted;
 }
 
 /** Cửa đi: thêm hướng mở cánh. Chỉ ghi giá trị khác mặc định; giá trị lạ thì coi như mặc định. */
-function cleanDoor(raw: unknown, room: RoomBox, t: Tally): DoorItem | null {
-  const door: DoorItem | null = cleanOpening(raw, room, t);
+function cleanDoor(raw: unknown, room: RoomBox, tally: Tally): DoorItem | null {
+  const door: DoorItem | null = cleanOpening(raw, room, tally);
   if (!door) return null;
   const r = raw as Record<string, unknown>;
   if (r.hinge === 'end') door.hinge = 'end';
@@ -232,8 +233,8 @@ function cleanDoor(raw: unknown, room: RoomBox, t: Tally): DoorItem | null {
   return door;
 }
 
-function cleanWindow(raw: unknown, room: RoomBox, t: Tally): WindowItem | null {
-  const base = cleanOpening(raw, room, t);
+function cleanWindow(raw: unknown, room: RoomBox, tally: Tally): WindowItem | null {
+  const base = cleanOpening(raw, room, tally);
   if (!base) return null;
   const win: WindowItem = base;
   const r = raw as Record<string, unknown>;
@@ -248,12 +249,12 @@ function cleanWindow(raw: unknown, room: RoomBox, t: Tally): WindowItem | null {
  * Danh sách cửa của một phòng. File không ghi (file cũ, hoặc ghi không phải danh sách) thì dùng cửa mặc định của phòng.
  * File có ghi thì tin file, kể cả danh sách rỗng. Quá nhiều thì bỏ phần dư.
  */
-function openingList<D extends OpeningDef, T>(raw: unknown, defaults: readonly D[], make: (d: D) => T, clean: (r: unknown) => T | null, t: Tally): T[] {
+function openingList<D extends OpeningDef, T>(raw: unknown, defaults: readonly D[], make: (d: D) => T, clean: (r: unknown) => T | null, tally: Tally): T[] {
   if (!Array.isArray(raw)) {
-    if (raw !== undefined) t.add('openings-fixed');
+    if (raw !== undefined) tally.add('openings-fixed');
     return defaults.map(make);
   }
-  if (raw.length > LIMITS.maxOpeningsPerKind) t.add('openings-fixed', raw.length - LIMITS.maxOpeningsPerKind);
+  if (raw.length > LIMITS.maxOpeningsPerKind) tally.add('openings-fixed', raw.length - LIMITS.maxOpeningsPerKind);
   const out: T[] = [];
   for (const r of raw.slice(0, LIMITS.maxOpeningsPerKind)) {
     const o = clean(r);
@@ -270,54 +271,54 @@ export type RoomResult =
   | { ok: false; code: 'too-many'; detail: string };
 
 /** Làm sạch một phòng. uid của mọi món là 0, gán mã thật bằng assignUids khi đưa vào ứng dụng. */
-export function sanitizeRoom(raw: unknown, def: RoomDef, reg: Registry, t: Tally): RoomResult {
+export function sanitizeRoom(raw: unknown, def: RoomDef, reg: Registry, tally: Tally): RoomResult {
   const id = def.id;
-  if (!isObj(raw)) return { ok: false, code: 'invalid', detail: `phòng "${id}" không phải một đối tượng` };
+  if (!isObj(raw)) return { ok: false, code: 'invalid', detail: t('phòng "{id}" không phải một đối tượng', { id }) };
   const dim = (key: RoomDimKey, fallback: number): number => {
     const v = num(raw[key]);
     if (v === null) {
-      t.add('room-clamped');
+      tally.add('room-clamped');
       return fallback;
     }
     const { min, max } = ROOM_DIM_LIMITS[key];
     const rounded = Math.round(v);
     const c = clamp(rounded, min, max);
-    if (c !== rounded) t.add('room-clamped');
+    if (c !== rounded) tally.add('room-clamped');
     return c;
   };
   const itemsRaw = raw.items ?? [];
-  if (!Array.isArray(itemsRaw)) return { ok: false, code: 'invalid', detail: `phòng "${id}": "items" không phải danh sách` };
+  if (!Array.isArray(itemsRaw)) return { ok: false, code: 'invalid', detail: t('phòng "{id}": "items" không phải danh sách', { id }) };
   const wallsRaw = raw.walls ?? {};
-  if (!isObj(wallsRaw)) return { ok: false, code: 'invalid', detail: `phòng "${id}": "walls" không phải đối tượng` };
+  if (!isObj(wallsRaw)) return { ok: false, code: 'invalid', detail: t('phòng "{id}": "walls" không phải đối tượng', { id }) };
 
   let total = itemsRaw.length;
   for (const wk of WALL_KEYS) {
     const list = wallsRaw[wk] ?? [];
-    if (!Array.isArray(list)) return { ok: false, code: 'invalid', detail: `phòng "${id}": tường ${wk} không phải danh sách` };
+    if (!Array.isArray(list)) return { ok: false, code: 'invalid', detail: t('phòng "{id}": tường {wall} không phải danh sách', { id, wall: wk }) };
     total += list.length;
   }
-  if (total > LIMITS.maxItemsPerRoom) return { ok: false, code: 'too-many', detail: `phòng "${def.name}" có ${total} món` };
+  if (total > LIMITS.maxItemsPerRoom) return { ok: false, code: 'too-many', detail: t('phòng "{name}" có {n} món', { name: def.name, n: total }) };
 
   const walls = { T: [], R: [], B: [], L: [] } as Record<WallKey, WallItem[]>;
   const box: RoomBox = { W: dim('W', def.W), H: dim('H', def.H), ceil: dim('ceil', def.ceil) };
   const layout: Layout = {
     ...box,
-    floor: colorOr(raw.floor, FLOOR_COLORS[def.floor]?.hex ?? FLOOR_COLORS[0]!.hex, t),
-    wall: colorOr(raw.wall, WALL_COLORS[0]!.hex, t),
+    floor: colorOr(raw.floor, FLOOR_COLORS[def.floor]?.hex ?? FLOOR_COLORS[0]!.hex, tally),
+    wall: colorOr(raw.wall, WALL_COLORS[0]!.hex, tally),
     items: [],
     walls,
-    doors: openingList(raw.doors, def.doors, (d) => fitOpening({ ...d, uid: 0 }, box.W, box.H), (r) => cleanDoor(r, box, t), t),
-    windows: openingList(raw.windows, def.windows, (d) => fitOpening({ ...d, uid: 0 }, box.W, box.H), (r) => cleanWindow(r, box, t), t),
+    doors: openingList(raw.doors, def.doors, (d) => fitOpening({ ...d, uid: 0 }, box.W, box.H), (r) => cleanDoor(r, box, tally), tally),
+    windows: openingList(raw.windows, def.windows, (d) => fitOpening({ ...d, uid: 0 }, box.W, box.H), (r) => cleanWindow(r, box, tally), tally),
   };
   const rails = railsOr(raw.rails, def.rails);
   if (rails) layout.rails = rails;
   for (const r of itemsRaw) {
-    const it = sanitizeFloor(r, reg, t);
+    const it = sanitizeFloor(r, reg, tally);
     if (it) layout.items.push(it);
   }
   for (const wk of WALL_KEYS) {
     for (const r of (wallsRaw[wk] ?? []) as unknown[]) {
-      const it = sanitizeWall(r, reg, t);
+      const it = sanitizeWall(r, reg, tally);
       if (it) walls[wk].push(it);
     }
   }

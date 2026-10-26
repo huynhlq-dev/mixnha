@@ -13,6 +13,7 @@ import type { OpeningDef, WallKey } from '../data/schema';
 import { MARGIN, type Frame } from './frame';
 import type { Grab } from './plan';
 import { edgeTag, gridLines, hdim, lockGlyph, n2, openingLabel, openingOpen, pickLabel, vdim } from './svg';
+import { t, tn } from '../i18n';
 
 export interface ElevationInput {
   layout: Layout;
@@ -65,7 +66,7 @@ export function renderElevation(i: ElevationInput): Frame {
 
   for (const g of R.guides) {
     o.push(`<path d="M0 ${Y(g.y)}H${len}" style="stroke:${INK};stroke-opacity:.45;stroke-width:1;stroke-dasharray:6 4"/>`);
-    o.push(`<text x="4" y="${Y(g.y) - 3}" font-size="8" font-family="JetBrains Mono,monospace" style="fill:${INK};opacity:.7">${escapeHtml(g.label)}</text>`);
+    o.push(`<text x="4" y="${Y(g.y) - 3}" font-size="8" font-family="JetBrains Mono,monospace" style="fill:${INK};opacity:.7">${escapeHtml(tn(g.label))}</text>`);
   }
 
   // cửa đi, cửa sổ: chồng lên nhau thì viền cam, đang chọn thì viền xanh
@@ -95,7 +96,7 @@ export function renderElevation(i: ElevationInput): Frame {
       `<rect x="${n2(p.s0)}" y="${Y(hh)}" width="${n2(wd)}" height="${hh}" style="fill:${it.color};fill-opacity:.4;stroke:${INK};stroke-opacity:.55;stroke-width:1;stroke-dasharray:4 3"/>`,
     );
     if (wd >= 60 && hh >= 24) {
-      o.push(`<text x="${n2(p.s0 + wd / 2)}" y="${Y(hh) + 12}" text-anchor="middle" font-size="8" style="fill:${INK};opacity:.7">${escapeHtml(it.name)} (sàn)</text>`);
+      o.push(`<text x="${n2(p.s0 + wd / 2)}" y="${Y(hh) + 12}" text-anchor="middle" font-size="8" style="fill:${INK};opacity:.7">${escapeHtml(t('{name} (sàn)', { name: tn(it.name) }))}</text>`);
     }
   }
 
@@ -109,19 +110,19 @@ export function renderElevation(i: ElevationInput): Frame {
     const lb = pickLabel(it.name, short, it.w, it.h);
     const cx = it.x;
     const cy = Y(it.y + it.h / 2);
-    let t = '';
+    let txt = '';
     if (lb?.rot) {
-      t += `<text transform="translate(${n2(cx)} ${n2(cy + 3)}) rotate(-90)" text-anchor="middle" font-size="9" font-weight="600" style="fill:${tc};pointer-events:none">${escapeHtml(lb.t)}</text>`;
+      txt += `<text transform="translate(${n2(cx)} ${n2(cy + 3)}) rotate(-90)" text-anchor="middle" font-size="9" font-weight="600" style="fill:${tc};pointer-events:none">${escapeHtml(lb.t)}</text>`;
     } else if (lb) {
-      t += `<text x="${n2(cx)}" y="${n2(cy + (it.h >= 40 ? -1 : 3))}" text-anchor="middle" font-size="9" font-weight="600" style="fill:${tc};pointer-events:none">${escapeHtml(lb.t)}</text>`;
+      txt += `<text x="${n2(cx)}" y="${n2(cy + (it.h >= 40 ? -1 : 3))}" text-anchor="middle" font-size="9" font-weight="600" style="fill:${tc};pointer-events:none">${escapeHtml(lb.t)}</text>`;
       if (dim && it.w >= 60 && it.h >= 40) {
-        t += `<text x="${n2(cx)}" y="${n2(cy + 10)}" text-anchor="middle" font-size="8" font-family="JetBrains Mono,monospace" style="fill:${tc};opacity:.8;pointer-events:none">${fm(it.w)}×${fm(it.h)}</text>`;
+        txt += `<text x="${n2(cx)}" y="${n2(cy + 10)}" text-anchor="middle" font-size="8" font-family="JetBrains Mono,monospace" style="fill:${tc};opacity:.8;pointer-events:none">${fm(it.w)}×${fm(it.h)}</text>`;
       }
     }
     const lock = it.locked ? lockGlyph(r.x0 + 9, Y(r.y1) + 9, 0) : '';
     o.push(
-      `<g class="it" data-uid="${it.uid}" tabindex="0" role="button" aria-label="${escapeHtml(it.name)}, ${fm(it.w)} x ${fm(it.h)} cm, cao ${fm(it.y)} cm so với sàn${it.locked ? ', đã khóa' : ''}" style="cursor:${it.locked ? 'pointer' : 'move'}">` +
-        `<rect x="${n2(r.x0)}" y="${n2(Y(r.y1))}" width="${it.w}" height="${it.h}" rx="2" style="fill:${it.color};stroke:${stroke};stroke-width:${bad || selected ? 3 : 1.2}"/>${t}${lock}</g>`,
+      `<g class="it" data-uid="${it.uid}" tabindex="0" role="button" aria-label="${escapeHtml(t('{name}, {w} x {h} cm, cao {y} cm so với sàn', { name: tn(it.name), w: fm(it.w), h: fm(it.h), y: fm(it.y) }))}${it.locked ? escapeHtml(t(', đã khóa')) : ''}" style="cursor:${it.locked ? 'pointer' : 'move'}">` +
+        `<rect x="${n2(r.x0)}" y="${n2(Y(r.y1))}" width="${it.w}" height="${it.h}" rx="2" style="fill:${it.color};stroke:${stroke};stroke-width:${bad || selected ? 3 : 1.2}"/>${txt}${lock}</g>`,
     );
   }
 
@@ -152,24 +153,24 @@ export function renderElevation(i: ElevationInput): Frame {
   }
 
   const nbad = info.bad.size;
-  const name = WALL_NAMES[wl];
+  const name = tn(WALL_NAMES[wl]);
   const frameStatus: Frame['status'] =
     overlap.size > 0
-      ? { tone: 'bad', text: 'Cửa đi hoặc cửa sổ đang chồng lên nhau (viền cam), hãy dời ra xa nhau.' }
+      ? { tone: 'bad', text: t('Cửa đi hoặc cửa sổ đang chồng lên nhau (viền cam), hãy dời ra xa nhau.') }
       : nbad > 0
-      ? { tone: 'bad', text: `${nbad} món chồng lấn, vượt ra ngoài tường hoặc đè lên cửa, cửa sổ.` }
+      ? { tone: 'bad', text: t('{n} món chồng lấn, vượt ra ngoài tường hoặc đè lên cửa, cửa sổ.', { n: nbad }) }
       : {
           tone: 'good',
-          text: `Không chồng lấn. Có ${list.length} món trên ${name.toLowerCase()}. Nét đứt là đồ đứng sàn trong phòng, nằm trong 1 m cách tường.`,
+          text: t('Không chồng lấn. Có {n} món trên {wall}. Nét đứt là đồ đứng sàn trong phòng, nằm trong 1 m cách tường.', { n: list.length, wall: name.toLowerCase() }),
         };
 
   return {
     bounds: { x: -MARGIN, y: -MARGIN, w: len + 2 * MARGIN, h: C + 2 * MARGIN },
-    aria: `${name} của ${R.name}, dài ${len} cm, cao ${C} cm`,
+    aria: t('{wall} của {room}, dài {len} cm, cao {h} cm', { wall: name, room: tn(R.name), len, h: C }),
     svg: o.join(''),
-    title: `${R.name} · ${name}`,
+    title: `${tn(R.name)} · ${name}`,
     size: `${len} × ${C} cm`,
-    area: `${fm((len * C) / 10000)} m² tường`,
+    area: t('{area} m² tường', { area: fm((len * C) / 10000) }),
     status: frameStatus,
   };
 }

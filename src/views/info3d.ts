@@ -6,6 +6,7 @@ import type { Layout } from '../core/types';
 import type { Interior } from '../core/interior';
 import type { AptRoom } from './apartment';
 import type { Frame } from './frame';
+import { t, tn } from '../i18n';
 
 export type Info3D = Pick<Frame, 'title' | 'size' | 'area' | 'status'>;
 
@@ -14,13 +15,13 @@ export function describe3D(layout: Layout, R: RoomGeo, reg: Registry, failed: bo
   const bad = analysePlan(layout, R, reg).bad.size;
   let status: Frame['status'];
   if (failed) {
-    status = { tone: 'good', text: 'Chưa dựng được 3D trên trình duyệt này. Mặt bằng và mặt đứng vẫn dùng bình thường.' };
+    status = { tone: 'good', text: t('Chưa dựng được 3D trên trình duyệt này. Mặt bằng và mặt đứng vẫn dùng bình thường.') };
   } else if (bad > 0) {
-    status = { tone: 'bad', text: `${bad} món đang chồng lấn, nằm ngoài phòng hoặc chắn vùng mở cửa (khung cam).` };
+    status = { tone: 'bad', text: t('{n} món đang chồng lấn, nằm ngoài phòng hoặc chắn vùng mở cửa (khung cam).', { n: bad }) };
   } else {
-    status = { tone: 'good', text: 'Bấm vào món để chọn, kéo món để di chuyển, kéo vào chỗ trống để xoay 360°. Kéo món từ thư viện thả thẳng vào phòng.' };
+    status = { tone: 'good', text: t('Bấm vào món để chọn, kéo món để di chuyển, kéo vào chỗ trống để xoay 360°. Kéo món từ thư viện thả thẳng vào phòng.') };
   }
-  return { title: `${R.name} · 3D`, size: `${R.W} × ${R.H} × ${R.ceil} cm`, area: `${fm((R.W * R.H) / 10000)} m²`, status };
+  return { title: `${tn(R.name)} · 3D`, size: `${R.W} × ${R.H} × ${R.ceil} cm`, area: `${fm((R.W * R.H) / 10000)} m²`, status };
 }
 
 /** Dòng tiêu đề và trạng thái của kiểu xem 3D cả căn hộ (chỉ để xem). */
@@ -28,7 +29,7 @@ export function describeApartment3D(rooms: readonly AptRoom[], failed: boolean, 
   // diện tích trong nhà: các phòng cộng khoảng trống kín giữa các phòng (hành lang) nếu đã tính
   const area = interior ? interior.total : rooms.reduce((a, r) => a + (r.geo.W * r.geo.H) / 10000, 0);
   const status: Frame['status'] = failed
-    ? { tone: 'good', text: 'Chưa dựng được 3D trên trình duyệt này. Mặt bằng cả căn hộ vẫn dùng bình thường.' }
-    : { tone: 'good', text: 'Kéo để xoay 360°, cuộn hoặc chụm hai ngón để phóng to. 3D cả căn hộ chỉ để xem: muốn sửa đồ thì quay về Mặt bằng, hoặc zoom vào một phòng.' };
-  return { title: 'Cả căn hộ · 3D', size: `${rooms.length} phòng`, area: `${fm(area)} m²`, status };
+    ? { tone: 'good', text: t('Chưa dựng được 3D trên trình duyệt này. Mặt bằng cả căn hộ vẫn dùng bình thường.') }
+    : { tone: 'good', text: t('Kéo để xoay 360°, cuộn hoặc chụm hai ngón để phóng to. 3D cả căn hộ chỉ để xem: muốn sửa đồ thì quay về Mặt bằng, hoặc zoom vào một phòng.') };
+  return { title: t('Cả căn hộ · 3D'), size: t('{n} phòng', { n: rooms.length }), area: `${fm(area)} m²`, status };
 }

@@ -71,6 +71,7 @@ import { bindProps, paintRotation, updateProps, type OpeningModel, type PropsApp
 import { remindMessage } from './remind';
 import { bindSwatches, swatchesHtml, type SwatchApp, type SwatchKey } from './swatches';
 import { Toast } from './toast';
+import { t, tn } from '../i18n';
 
 /** Phần 3D (kèm three.js) nạp riêng khi người dùng mở 3D lần đầu, để trang mở nhanh hơn. */
 export type SceneModule = typeof import('../views/scene3d');
@@ -86,11 +87,12 @@ export interface AppDeps {
   copy?: (text: string) => Promise<boolean>;
 }
 
+/** Câu báo khi thao tác trên món đã khóa (đọc lúc cần để theo ngôn ngữ đang chọn). */
 const LOCKED = {
-  move: 'Món này đã khóa nên không di chuyển được. Mở khóa ở bảng bên phải nếu muốn sửa.',
-  rotate: 'Món này đã khóa nên không xoay được. Mở khóa ở bảng bên phải nếu muốn xoay.',
-  resize: 'Món này đã khóa nên không đổi kích thước được. Mở khóa ở bảng bên phải nếu muốn sửa.',
-  delete: 'Món này đã khóa nên không xóa được. Mở khóa ở bảng bên phải nếu muốn xóa.',
+  move: () => t('Món này đã khóa nên không di chuyển được. Mở khóa ở bảng bên phải nếu muốn sửa.'),
+  rotate: () => t('Món này đã khóa nên không xoay được. Mở khóa ở bảng bên phải nếu muốn xoay.'),
+  resize: () => t('Món này đã khóa nên không đổi kích thước được. Mở khóa ở bảng bên phải nếu muốn sửa.'),
+  delete: () => t('Món này đã khóa nên không xóa được. Mở khóa ở bảng bên phải nếu muốn xóa.'),
 } as const;
 
 /** Khóa nhớ lần xem cuối: "apartment" (mô hình cả căn) hoặc "room" (đang ở trong một phòng). Chưa có thì mở mô hình cả căn. */
@@ -118,10 +120,10 @@ const samePlan = (a: AptPlan, b: AptPlan): boolean => JSON.stringify(a) === JSON
 /** Số bước Hoàn tác nhớ cho mô hình căn hộ. */
 const APT_UNDO = 100;
 
-const FULL_MSG = `Phòng này đã có ${LIMITS.maxItemsPerRoom} món, là mức tối đa. Hãy xóa bớt món trước khi thêm.`;
+const fullMsg = (): string => t('Phòng này đã có {max} món, là mức tối đa. Hãy xóa bớt món trước khi thêm.', { max: LIMITS.maxItemsPerRoom });
 
-const V3_HINT_ROOM = 'Kéo nền để xoay · kéo món để di chuyển · cuộn hoặc chụm hai ngón để phóng to';
-const V3_HINT_APT = 'Kéo để xoay · cuộn hoặc chụm hai ngón để phóng to · chỉ để xem, sửa đồ ở Mặt bằng';
+const v3HintRoom = (): string => t('Kéo nền để xoay · kéo món để di chuyển · cuộn hoặc chụm hai ngón để phóng to');
+const v3HintApt = (): string => t('Kéo để xoay · cuộn hoặc chụm hai ngón để phóng to · chỉ để xem, sửa đồ ở Mặt bằng');
 
 const isMode = (v: unknown): v is Mode => v === 'plan' || v === 'elev' || v === '3d';
 
@@ -205,7 +207,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
       },
       now: () => new Date(this.now()),
       onExported: () => this.exported(),
-      notice: (t) => this.notice(t),
+      notice: (text) => this.notice(text),
       download: d.download,
       copy: d.copy,
     });
@@ -359,7 +361,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     const it = findItem(src, sel) as FloorItem | undefined;
     if (!it || !dst) return false;
     if (isFull(dst)) {
-      this.notice(`${this.defOf(to).name} đã có ${LIMITS.maxItemsPerRoom} món, là mức tối đa nên không chuyển đồ vào được.`);
+      this.notice(t('{name} đã có {max} món, là mức tối đa nên không chuyển đồ vào được.', { name: tn(this.defOf(to).name), max: LIMITS.maxItemsPerRoom }));
       return false;
     }
     src.items = src.items.filter((x) => x.uid !== it.uid);
@@ -536,7 +538,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     this.stage.fit();
     this.updatePanels();
     this.persist();
-    this.notice(`Đã tạo dự án mới gồm ${built.rooms.length} phòng. Kéo đồ từ thư viện thả vào phòng, hoặc bấm đúp một phòng để zoom vào thiết kế.`);
+    this.notice(t('Đã tạo dự án mới gồm {n} phòng. Kéo đồ từ thư viện thả vào phòng, hoặc bấm đúp một phòng để zoom vào thiết kế.', { n: built.rooms.length }));
   }
 
   /* ---------- Thêm, xóa, đổi tên phòng ---------- */
@@ -563,7 +565,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
   /** Thêm một phòng theo loại. at là nơi thả trong mô hình (tâm phòng); không có thì tự tìm chỗ trống cạnh các phòng khác. */
   private addRoom(type: RoomEntry['type'], at: { x: number; y: number } | null): void {
     if (this.rooms.length >= LIMITS.maxRooms) {
-      this.notice(`Căn hộ đã có ${LIMITS.maxRooms} phòng, là mức tối đa. Hãy xóa bớt phòng trước khi thêm.`);
+      this.notice(t('Căn hộ đã có {max} phòng, là mức tối đa. Hãy xóa bớt phòng trước khi thêm.', { max: LIMITS.maxRooms }));
       return;
     }
     const entry = newRoomEntry(type, this.rooms);
@@ -589,8 +591,10 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     this.afterRoomsChanged();
     this.notice(
       this.v.overview
-        ? `Đã thêm ${entry.name}${z ? ' (nằm trên phòng bị đè, phòng đó khuyết phần bị che)' : ''}. Thả đồ vào phòng để bày; bật "Chỉnh bố cục" để dời hoặc đổi cỡ phòng; bấm Hoàn tác nếu thêm nhầm.`
-        : `Đã thêm ${entry.name} vào căn hộ. Bấm "Cả căn hộ" để xem và sắp xếp.`,
+        ? z
+          ? t('Đã thêm {name} (nằm trên phòng bị đè, phòng đó khuyết phần bị che). Thả đồ vào phòng để bày; bật "Chỉnh bố cục" để dời hoặc đổi cỡ phòng; bấm Hoàn tác nếu thêm nhầm.', { name: tn(entry.name) })
+          : t('Đã thêm {name}. Thả đồ vào phòng để bày; bật "Chỉnh bố cục" để dời hoặc đổi cỡ phòng; bấm Hoàn tác nếu thêm nhầm.', { name: tn(entry.name) })
+        : t('Đã thêm {name} vào căn hộ. Bấm "Cả căn hộ" để xem và sắp xếp.', { name: tn(entry.name) }),
     );
   }
 
@@ -599,7 +603,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     const index = this.rooms.findIndex((r) => r.id === id);
     if (index < 0) return;
     if (this.rooms.length <= 1) {
-      this.notice('Căn hộ cần có ít nhất một phòng nên không xóa phòng cuối cùng được.');
+      this.notice(t('Căn hộ cần có ít nhất một phòng nên không xóa phòng cuối cùng được.'));
       return;
     }
     // chốt vị trí các phòng còn lại để chúng không tự dồn chỗ khi có phòng bị xóa
@@ -609,7 +613,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     this.removeRoomEntry(id);
     this.pushAptOp(op);
     this.afterRoomsChanged();
-    this.notice(`Đã xóa ${entry.name}. Bấm Hoàn tác để lấy lại.`);
+    this.notice(t('Đã xóa {name}. Bấm Hoàn tác để lấy lại.', { name: tn(entry.name) }));
   }
 
   /** Đổi tên phòng. Trả về tên đang dùng (giữ tên cũ nếu tên mới trống). */
@@ -617,7 +621,8 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     const entry = this.rooms.find((r) => r.id === id);
     if (!entry) return '';
     const name = cleanText(raw, MAX_ROOM_NAME);
-    if (!name || name === entry.name) return entry.name;
+    // ô tên đang hiện tên đã dịch của phòng chưa đặt tên riêng: không đổi gì thì không coi là đổi tên
+    if (!name || name === entry.name || name === tn(entry.name)) return tn(entry.name);
     this.pushAptOp({ kind: 'rename', room: id, before: entry.name, after: name });
     this.rooms = this.rooms.map((r) => (r.id === id ? { ...r, name } : r));
     this.afterRoomsChanged();
@@ -683,7 +688,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     els.aptSel.hidden = !id;
     if (!id) return;
     const l = this.layouts[id]!;
-    const name = this.rooms.find((r) => r.id === id)?.name ?? '';
+    const name = tn(this.rooms.find((r) => r.id === id)?.name ?? '');
     els.aptSelName.textContent = name;
     if (document.activeElement !== els.aptName) els.aptName.value = name;
     if (id === this.room) {
@@ -740,9 +745,10 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
 
   /** Thêm một cửa đi hoặc cửa sổ lên tường: thả ở đâu thì đặt ở đó; bấm trong thư viện thì tự tìm chỗ trống (ưu tiên tường đang xem). */
   private dropOpening(preset: OpeningPreset, at: OpeningDrop | null, into = ''): void {
+    // into: tên phòng nhận món khi bấm trong thư viện lúc xem cả căn hộ (để báo đã thêm vào đâu)
     const l = this.layout();
     if (isOpeningsFull(l, preset.kind)) {
-      this.notice(`Phòng này đã có ${LIMITS.maxOpeningsPerKind} ${preset.kind === 'door' ? 'cửa đi' : 'cửa sổ'}, là mức tối đa. Hãy xóa bớt trước khi thêm.`);
+      this.notice(preset.kind === 'door' ? t('Phòng này đã có {max} cửa đi, là mức tối đa. Hãy xóa bớt trước khi thêm.', { max: LIMITS.maxOpeningsPerKind }) : t('Phòng này đã có {max} cửa sổ, là mức tối đa. Hãy xóa bớt trước khi thêm.', { max: LIMITS.maxOpeningsPerKind }));
       return;
     }
     const mode = this.v.mode;
@@ -754,7 +760,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     // đang xem mặt đứng thì đi theo cửa sang tường mới (nếu tường đang xem hết chỗ)
     if (mode === 'elev') this.v.wall = spot.wall;
     this.refresh(false);
-    if (into && !at) this.notice(`Đã thêm ${preset.name}${into}.`);
+    if (into && !at) this.notice(t('Đã thêm {name} vào {room}.', { name: tn(preset.name), room: into }));
   }
 
   drop(id: string, at: DropAt | null): void {
@@ -771,12 +777,12 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
       const rects = this.aptRects();
       const room = at?.kind === 'apartment' ? roomAtPoint(rects, at, 10, this.aptGeometry().stack) : (this.v.aptSel ?? this.room);
       if (!room || !this.hasRoom(room)) {
-        this.notice('Hãy thả đồ vào bên trong một phòng, không thả ra hành lang giữa các phòng.');
+        this.notice(t('Hãy thả đồ vào bên trong một phòng, không thả ra hành lang giữa các phòng.'));
         return;
       }
       this.focusRoom(room);
       if (at?.kind === 'apartment') local = { kind: 'plan', x: at.x - rects[room]!.x, y: at.y - rects[room]!.y };
-      into = ` vào ${this.defOf(room).name}`;
+      into = tn(this.defOf(room).name);
     }
     const preset = this.registry.opening(id);
     if (preset) {
@@ -790,7 +796,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     // thư viện mặt bằng chỉ có đồ sàn, mặt đứng chỉ có đồ tường; món lạc loài (kéo từ chỗ khác tới) thì bỏ qua
     if ((def.place === 'wall' && mode === 'plan') || (def.place === 'floor' && mode === 'elev')) return;
     if (isFull(l)) {
-      this.notice(FULL_MSG);
+      this.notice(fullMsg());
       return;
     }
     let sel: Selection;
@@ -804,7 +810,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     this.v.sel = sel;
     this.v.opening = null;
     this.refresh(false);
-    if (into && !at) this.notice(`Đã thêm ${def.name}${into}.`);
+    if (into && !at) this.notice(t('Đã thêm {name} vào {room}.', { name: tn(def.name), room: into }));
   }
 
   rotateBy(delta: number): void {
@@ -818,7 +824,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     const it = this.selItem();
     if (!sel || !it || sel.scope !== 'floor') return;
     if (!rotateItem(it as FloorItem, delta)) {
-      this.notice(LOCKED.rotate);
+      this.notice(LOCKED.rotate());
       return;
     }
     this.refresh(false);
@@ -845,7 +851,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
       return;
     }
     if (!removeItem(this.layout(), sel)) {
-      this.notice(LOCKED.delete);
+      this.notice(LOCKED.delete());
       return;
     }
     this.deselect();
@@ -1026,7 +1032,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     const kept = (mode === 'elev' ? l.walls[wall].length : mode === '3d' ? countItems(l) : l.items.length) || 0;
     this.deselect();
     this.refresh(false);
-    if (kept > 0) this.notice(removed > 0 ? `Đã xóa ${removed} món. ${kept} món đã khóa được giữ lại.` : 'Các món ở đây đều đã khóa nên không xóa. Mở khóa từng món nếu muốn xóa.');
+    if (kept > 0) this.notice(removed > 0 ? t('Đã xóa {n} món. {kept} món đã khóa được giữ lại.', { n: removed, kept }) : t('Các món ở đây đều đã khóa nên không xóa. Mở khóa từng món nếu muốn xóa.'));
   }
 
   /* ---------- Sửa món đang chọn (bảng thuộc tính) ---------- */
@@ -1088,7 +1094,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     if (v === current) return v;
     const ok = onWall ? setWallField(it as WallItem, key as WallField, v) : setFloorSize(it as FloorItem, key as FloorField, v);
     if (!ok) {
-      this.notice(key === 'y' ? LOCKED.move : LOCKED.resize);
+      this.notice(key === 'y' ? LOCKED.move() : LOCKED.resize());
       return current;
     }
     this.commitEdit(final);
@@ -1100,7 +1106,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     const it = this.selItem();
     if (sel?.scope !== 'floor' || !it) return null;
     if (!setItemRotation(it as FloorItem, deg)) {
-      this.notice(LOCKED.rotate);
+      this.notice(LOCKED.rotate());
       return null;
     }
     this.commitEdit(final);
@@ -1177,7 +1183,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     if (!sel) return;
     const l = this.layout();
     if (isFull(l)) {
-      this.notice(FULL_MSG);
+      this.notice(fullMsg());
       return;
     }
     const copy = duplicateItem(l, sel, this.nextUid);
@@ -1289,7 +1295,12 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     this.touched();
     this.refresh(false);
     this.notice(
-      `Đã nhập ${rooms.length - skipped} phòng từ file${added ? `, thêm ${added} phòng mới vào căn hộ` : ''}${skipped ? `; bỏ ${skipped} phòng vì căn hộ đã đủ ${LIMITS.maxRooms} phòng` : ''}. Nhập nhầm thì bấm Hoàn tác ở từng phòng.`,
+      [
+        t('Đã nhập {n} phòng từ file', { n: rooms.length - skipped }),
+        added ? t(', thêm {n} phòng mới vào căn hộ', { n: added }) : '',
+        skipped ? t('; bỏ {n} phòng vì căn hộ đã đủ {max} phòng', { n: skipped, max: LIMITS.maxRooms }) : '',
+        t('. Nhập nhầm thì bấm Hoàn tác ở từng phòng.'),
+      ].join(''),
     );
   }
 
@@ -1338,9 +1349,25 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     const s = this.scene;
     s?.show();
     const info = this.v.overview ? describeApartment3D(this.apartment(), !!s?.failed, this.interior()) : describe3D(this.layout(), this.geo(), this.registry, !!s?.failed);
-    if (!s && !this.sceneFailed) info.status = { tone: 'good', text: 'Đang tải khung 3D...' };
-    else if (!s) info.status = { tone: 'good', text: 'Không tải được phần 3D. Hãy kiểm tra kết nối mạng rồi tải lại trang. Mặt bằng và mặt đứng vẫn dùng bình thường.' };
+    if (!s && !this.sceneFailed) info.status = { tone: 'good', text: t('Đang tải khung 3D...') };
+    else if (!s) info.status = { tone: 'good', text: t('Không tải được phần 3D. Hãy kiểm tra kết nối mạng rồi tải lại trang. Mặt bằng và mặt đứng vẫn dùng bình thường.') };
     this.showInfo(info);
+  }
+
+  /** Đã đổi ngôn ngữ: vẽ lại mọi thứ do code sinh ra (thư viện, tab, bảng bên phải, bản vẽ, ô màu); phần HTML viết sẵn đã được dịch trước đó. */
+  languageChanged(): void {
+    const { els } = this;
+    els.floorSw.innerHTML = swatchesHtml('floor', FLOOR_COLORS);
+    els.wallSw.innerHTML = swatchesHtml('wall', WALL_COLORS);
+    els.itemSw.innerHTML = swatchesHtml('item', ITEM_COLORS);
+    els.walls.innerHTML = wallTabsHtml(this.v.wall);
+    els.opWalls.innerHTML = wallTabsHtml(this.v.wall);
+    delete els.rooms.dataset.html;
+    this.library.render();
+    this.render();
+    this.updatePanels();
+    this.updateRemind();
+    this.newDlg.languageChanged();
   }
 
   /** Đã đổi giao diện sáng, tối. Mặt bằng và mặt đứng tự đổi màu theo biến CSS; riêng cảnh 3D phải lấy lại màu. */
@@ -1403,12 +1430,12 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     els.propsRoom.hidden = ov && is3d;
     // mục Phòng (cỡ, màu sàn, màu tường) là của phòng đang chọn: trên mô hình chỉ hiện khi đã chọn một phòng
     els.roomSec.hidden = ov && !v.aptSel;
-    els.roomHead.textContent = ov ? `Phòng: ${this.defOf(this.room).name}` : 'Phòng';
+    els.roomHead.textContent = ov ? t('Phòng: {name}', { name: tn(this.defOf(this.room).name) }) : t('Phòng');
     for (const el of [els.aptList, els.aptInfo]) el.hidden = !ov;
     els.btnApt.hidden = ov;
     // điện thoại: thanh nút nhanh. Xem 3D cả căn hộ thì chỉ thêm phòng được
-    els.mAdd.textContent = ov && is3d ? '＋ Thêm phòng' : '＋ Thêm đồ';
-    els.v3hint.textContent = ov ? V3_HINT_APT : V3_HINT_ROOM;
+    els.mAdd.textContent = ov && is3d ? t('＋ Thêm phòng') : t('＋ Thêm đồ');
+    els.v3hint.textContent = ov ? v3HintApt() : v3HintRoom();
     if (ov && !sel && !this.openingModel()) els.mDel.disabled = !(v.aptEdit && v.aptSel);
     for (const el of [els.btnAptEdit, els.btnAptAuto]) el.hidden = !ov || is3d;
     els.btnAptEdit.setAttribute('aria-checked', String(v.aptEdit));
@@ -1428,14 +1455,16 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
 
     els.btnDim.disabled = is3d;
     els.btnDetail.disabled = is3d;
-    els.btnReset.textContent = elev ? 'Mẫu tường này' : 'Bố trí mẫu';
-    els.btnReset.title = elev ? 'Đặt tường đang xem về bố trí mẫu. Có thể Hoàn tác.' : `Đặt đồ, cửa, kích thước và màu của phòng${ov ? ' đang chọn' : ''} về bố trí mẫu. Có thể Hoàn tác.`;
-    els.btnClear.textContent = elev ? 'Xóa tường này' : is3d ? 'Xóa cả phòng' : 'Xóa đồ sàn';
+    els.btnReset.textContent = elev ? t('Mẫu tường này') : t('Bố trí mẫu');
+    els.btnReset.title = elev ? t('Đặt tường đang xem về bố trí mẫu. Có thể Hoàn tác.') : ov ? t('Đặt đồ, cửa, kích thước và màu của phòng đang chọn về bố trí mẫu. Có thể Hoàn tác.') : t('Đặt đồ, cửa, kích thước và màu của phòng về bố trí mẫu. Có thể Hoàn tác.');
+    els.btnClear.textContent = elev ? t('Xóa tường này') : is3d ? t('Xóa cả phòng') : t('Xóa đồ sàn');
     els.btnClear.title = elev
-      ? 'Xóa mọi món trên tường đang xem. Món đã khóa được giữ lại. Có thể Hoàn tác.'
+      ? t('Xóa mọi món trên tường đang xem. Món đã khóa được giữ lại. Có thể Hoàn tác.')
       : is3d
-        ? 'Xóa mọi món của phòng, cả đồ sàn và đồ gắn tường. Món đã khóa được giữ lại. Có thể Hoàn tác.'
-        : `Xóa mọi món đặt trên sàn${ov ? ' của phòng đang chọn' : ''}, đồ gắn tường giữ nguyên. Món đã khóa được giữ lại. Có thể Hoàn tác.`;
+        ? t('Xóa mọi món của phòng, cả đồ sàn và đồ gắn tường. Món đã khóa được giữ lại. Có thể Hoàn tác.')
+        : ov
+          ? t('Xóa mọi món đặt trên sàn của phòng đang chọn, đồ gắn tường giữ nguyên. Món đã khóa được giữ lại. Có thể Hoàn tác.')
+          : t('Xóa mọi món đặt trên sàn, đồ gắn tường giữ nguyên. Món đã khóa được giữ lại. Có thể Hoàn tác.');
     this.updateHistoryButtons();
   }
 
@@ -1495,7 +1524,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     const ok = saveState(this.kv, this.room, this.layouts, this.penPrefs, this.meta, this.apt, this.rooms);
     if (!ok && !this.warnedSave) {
       this.warnedSave = true;
-      this.notice('Trình duyệt không cho lưu tự động (có thể đang ở chế độ riêng tư). Hãy bấm Xuất file để giữ bản vẽ.');
+      this.notice(t('Trình duyệt không cho lưu tự động (có thể đang ở chế độ riêng tư). Hãy bấm Xuất file để giữ bản vẽ.'));
     }
     this.updateHistoryButtons();
     this.updateRemind();
@@ -1642,7 +1671,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     const it = this.selItem();
     if (!sel || !it) return;
     if (!canEdit(it, 'move')) {
-      this.notice(LOCKED.move);
+      this.notice(LOCKED.move());
       return;
     }
     if (nudge(this.layout(), sel.scope, it, dir, step)) {

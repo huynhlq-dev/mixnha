@@ -12,6 +12,7 @@ import type { Frame } from './frame';
 import { renderPlan } from './plan';
 import { edgeTag, n2 } from './svg';
 import type { Bounds } from './viewport';
+import { t, tn } from '../i18n';
 
 /** Một phòng trong mô hình căn hộ: bản vẽ và hình học hiện tại của phòng. */
 export interface AptRoom {
@@ -394,7 +395,7 @@ export function renderApartment(rooms: readonly AptRoom[], view: ApartmentView =
       body = roomMini(room);
     }
     const fs = Math.max(14, Math.min(28, Math.min(W, H) / 12));
-    const label = `${room.name}, ${W} × ${H} cm, ${fm(area)} m². ${view.edit ? 'Kéo để dời phòng, bấm đúp để thiết kế phòng này' : 'Bấm để chọn, bấm đúp để thiết kế phòng này'}`;
+    const label = `${tn(room.name)}, ${W} × ${H} cm, ${fm(area)} m². ${view.edit ? t('Kéo để dời phòng, bấm đúp để thiết kế phòng này') : t('Bấm để chọn, bấm đúp để thiết kế phòng này')}`;
     o.push(
       `<g class="aptroom" data-room="${room.id}"${picked ? ' data-selected="true"' : ''}${local.length ? ' data-carved="true"' : ''} tabindex="0" role="button" aria-label="${escapeHtml(label)}">` +
         `<g transform="translate(${n2(r.x)} ${n2(r.y)})">` +
@@ -402,7 +403,7 @@ export function renderApartment(rooms: readonly AptRoom[], view: ApartmentView =
         // khung chỉ để tô sáng phòng khi trỏ hoặc chọn; không nhận chuột để đồ và cửa bên dưới bấm được
         `<rect class="apthit" x="-10" y="-10" width="${W + 20}" height="${H + 20}" rx="6"/>` +
         // tên và cỡ phòng nằm phía trên tường trên, trong khoảng hành lang giữa các phòng; phòng bị khuyết ghi diện tích còn lại
-        `<text class="aptname" x="0" y="${n2(-(10 + fs * 0.95))}" font-size="${n2(fs)}" font-weight="700">${escapeHtml(room.name)}</text>` +
+        `<text class="aptname" x="0" y="${n2(-(10 + fs * 0.95))}" font-size="${n2(fs)}" font-weight="700">${escapeHtml(tn(room.name))}</text>` +
         `<text class="aptsize" x="0" y="${n2(-14)}" font-size="${n2(fs * 0.62)}" font-family="JetBrains Mono,monospace">${W} × ${H} cm · ${fm(area)} m²</text>` +
         (handles ? edgeTag(W / 2, H, 0, fm(W), 'w', W) + edgeTag(W, H / 2, 90, fm(H), 'h', H) + handlesSvg(W, H, hs) : '') +
         `</g></g>`,
@@ -410,36 +411,36 @@ export function renderApartment(rooms: readonly AptRoom[], view: ApartmentView =
   }
   o.push(...ghosts);
   // "4 phòng · 60,2 m² (gồm 11,8 m² hành lang)": diện tích trong nhà, kể cả khoảng trống kín giữa các phòng
-  const sizeText = `${rooms.length} phòng · ${fm(total)} m²${interior.gaps >= 0.05 ? ` (gồm ${fm(interior.gaps)} m² hành lang)` : ''}`;
+  const sizeText = `${t('{n} phòng', { n: rooms.length })} · ${fm(total)} m²${interior.gaps >= 0.05 ? ` ${t('(gồm {area} m² hành lang)', { area: fm(interior.gaps) })}` : ''}`;
   const nProblems = problems.reduce((a, b) => a + b.n, 0);
-  const where = problems.map((x) => x.name).join(', ');
+  const where = problems.map((x) => tn(x.name)).join(', ');
   const nBuried = buried.reduce((a, b) => a + b.n, 0);
   let status: Frame['status'];
   if (hidden.length) {
-    status = { tone: 'bad', text: `${hidden.join(', ')} bị phòng khác che gần hết (còn dưới ${fm(MIN_VISIBLE / 10000)} m²). Hãy dời hoặc thu nhỏ phòng đang che.` };
+    status = { tone: 'bad', text: t('{names} bị phòng khác che gần hết (còn dưới {area} m²). Hãy dời hoặc thu nhỏ phòng đang che.', { names: hidden.map(tn).join(', '), area: fm(MIN_VISIBLE / 10000) }) };
   } else if (nBuried) {
-    status = { tone: 'bad', text: `${nBuried} món của ${buried.map((x) => x.name).join(', ')} nằm dưới phòng khác (bóng viền cam), hãy kéo ra khỏi chỗ bị che.` };
+    status = { tone: 'bad', text: t('{n} món của {names} nằm dưới phòng khác (bóng viền cam), hãy kéo ra khỏi chỗ bị che.', { n: nBuried, names: buried.map((x) => tn(x.name)).join(', ') }) };
   } else if (nProblems) {
-    status = { tone: 'bad', text: `${nProblems} chỗ đang chồng lấn, nằm ngoài phòng hoặc chắn cửa (viền cam), ở: ${where}.` };
+    status = { tone: 'bad', text: t('{n} chỗ đang chồng lấn, nằm ngoài phòng hoặc chắn cửa (viền cam), ở: {where}.', { n: nProblems, where }) };
   } else if (view.edit) {
     status = {
       tone: 'good',
-      text: `Chỉnh bố cục: kéo phòng để dời, kéo tay nắm để đổi cỡ; phòng kéo sau nằm trên và khuyết phòng bị đè. ${sizeText}.`,
+      text: t('Chỉnh bố cục: kéo phòng để dời, kéo tay nắm để đổi cỡ; phòng kéo sau nằm trên và khuyết phòng bị đè. {size}.', { size: sizeText }),
     };
   } else if (view.items) {
     status = {
       tone: 'good',
-      text: `Kéo đồ vào phòng, bấm đồ để sửa, bấm đúp phòng để zoom vào. ${sizeText} · ${items} món.`,
+      text: t('Kéo đồ vào phòng, bấm đồ để sửa, bấm đúp phòng để zoom vào. {size} · {n} món.', { size: sizeText, n: items }),
     };
   } else {
-    status = { tone: 'good', text: `Bấm vào một phòng trên mô hình để phóng to và thiết kế. ${sizeText} · ${items} món đồ.` };
+    status = { tone: 'good', text: t('Bấm vào một phòng trên mô hình để phóng to và thiết kế. {size} · {n} món đồ.', { size: sizeText, n: items }) };
   }
   return {
     bounds,
-    aria: `Mô hình căn hộ gồm ${rooms.length} phòng. ${view.edit ? 'Đang chỉnh bố cục: kéo phòng để dời, kéo tay nắm để đổi kích thước' : 'Bấm vào phòng để chọn, bấm đúp để thiết kế phòng đó'}`,
+    aria: `${t('Mô hình căn hộ gồm {n} phòng.', { n: rooms.length })} ${view.edit ? t('Đang chỉnh bố cục: kéo phòng để dời, kéo tay nắm để đổi kích thước') : t('Bấm vào phòng để chọn, bấm đúp để thiết kế phòng đó')}`,
     svg: o.join(''),
-    title: 'Cả căn hộ',
-    size: `${rooms.length} phòng`,
+    title: t('Cả căn hộ'),
+    size: t('{n} phòng', { n: rooms.length }),
     area: `${fm(total)} m²`,
     status,
   };

@@ -1,6 +1,7 @@
 import { plain } from '../core/format';
 import type { Issue } from '../core/validate';
 import type { CategoryDef, ItemDef, ItemStatus, Place } from '../data/schema';
+import { t, tn } from '../i18n';
 
 /**
  * Phần tính toán của trang gallery: lọc, gom nhóm, đếm. Không đụng tới DOM nên kiểm thử được.
@@ -41,7 +42,7 @@ export interface GalleryGroup {
 export function matchesQuery(it: ItemDef, query: string): boolean {
   const q = plain(query.trim());
   if (!q) return true;
-  const hay = plain([it.name, it.short ?? '', it.id, it.note ?? '', it.shape ?? ''].join(' '));
+  const hay = plain([it.name, tn(it.name), it.short ?? '', it.id, it.note ?? '', it.shape ?? ''].join(' '));
   return q.split(/\s+/).every((word) => hay.includes(word));
 }
 
@@ -92,7 +93,7 @@ export function countIssues(issues: readonly Issue[]): { errors: number; warning
 export function summaryText(items: readonly ItemDef[], issues: readonly Issue[]): string {
   const n = countByStatus(items);
   const c = countIssues(issues);
-  const parts = [`${items.length} món`, `${n.live} đã đưa lên`, `${n.draft} đang làm`, `${n.retired} ngừng dùng`];
-  const bad = c.errors === 0 && c.warnings === 0 ? 'Dữ liệu không có lỗi' : `${c.errors} lỗi, ${c.warnings} cảnh báo`;
+  const parts = [t('{n} món', { n: items.length }), t('{n} đã đưa lên', { n: n.live }), t('{n} đang làm', { n: n.draft }), t('{n} ngừng dùng', { n: n.retired })];
+  const bad = c.errors === 0 && c.warnings === 0 ? t('Dữ liệu không có lỗi') : `${t('{n} lỗi', { n: c.errors })}, ${t('{n} cảnh báo', { n: c.warnings })}`;
   return `${parts.join(' · ')}. ${bad}.`;
 }

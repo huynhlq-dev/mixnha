@@ -9,6 +9,7 @@ import { dragOpeningPlan, dragPlan, grabOpeningPlan, grabPlan, renderPlan, rotat
 import { renderApartment, roomAtPoint, type AptRect } from './apartment';
 import { easeInOut, lerpView, parseView, unitsPerPixel, viewToString, Viewport, type Bounds } from './viewport';
 import type { RoomId } from '../data/rooms';
+import { t } from '../i18n';
 
 /** Con trỏ di chuyển ít hơn mức này (px) thì coi là bấm chứ không phải kéo. */
 const CLICK_SLOP = 4;
@@ -412,7 +413,7 @@ export class Stage2D {
     if (d.kind === 'locked') {
       if (!d.told && Math.hypot(e.clientX - d.x, e.clientY - d.y) >= CLICK_SLOP) {
         d.told = true;
-        this.host.notice('Món này đã khóa nên không kéo được. Mở khóa ở bảng bên phải nếu muốn di chuyển.');
+        this.host.notice(t('Món này đã khóa nên không kéo được. Mở khóa ở bảng bên phải nếu muốn di chuyển.'));
       }
       return;
     }

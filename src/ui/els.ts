@@ -16,6 +16,8 @@ export function queryEls(root: ParentNode = document) {
   const div = (id: string) => find(root, id, HTMLElement);
   return {
     btnTheme: btn('btnTheme'),
+    langBox: div('langBox'),
+    npLang: div('npLang'),
 
     remind: div('remind'),
     remindText: div('remindText'),

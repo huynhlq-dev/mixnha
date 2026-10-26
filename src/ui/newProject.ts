@@ -4,20 +4,21 @@ import { LIMITS } from '../core/limits';
 import { ROOM_TYPE_IDS, ROOMS, type RoomTypeId } from '../data/rooms';
 import { openDialog } from './dialog';
 import type { Els } from './els';
+import { t, tn } from '../i18n';
 
 type Counts = Record<RoomTypeId, number>;
 
 /** Mỗi loại phòng một hàng: tên, cỡ mặc định và nút − / + chọn số phòng. */
 export function newProjectRowsHtml(counts: Counts): string {
   const total = totalRooms(counts);
-  return ROOM_TYPE_IDS.map((t) => {
-    const n = counts[t];
-    const name = escapeHtml(ROOMS[t].name);
+  return ROOM_TYPE_IDS.map((ty) => {
+    const n = counts[ty];
+    const name = escapeHtml(tn(ROOMS[ty].name));
     return (
-      `<li class="nprow" data-type="${t}"><span class="npname">${name}<small class="meta">${ROOMS[t].W} × ${ROOMS[t].H} cm</small></span>` +
-      `<span class="npstep"><button class="btn" type="button" data-step="-1" aria-label="Bớt ${name}"${n <= 0 ? ' disabled' : ''}>−</button>` +
-      `<output aria-live="polite" aria-label="Số ${name}">${n}</output>` +
-      `<button class="btn" type="button" data-step="1" aria-label="Thêm ${name}"${total >= LIMITS.maxRooms ? ' disabled' : ''}>+</button></span></li>`
+      `<li class="nprow" data-type="${ty}"><span class="npname">${name}<small class="meta">${ROOMS[ty].W} × ${ROOMS[ty].H} cm</small></span>` +
+      `<span class="npstep"><button class="btn" type="button" data-step="-1" aria-label="${t('Bớt {name}', { name })}"${n <= 0 ? ' disabled' : ''}>−</button>` +
+      `<output aria-live="polite" aria-label="${t('Số {name}', { name })}">${n}</output>` +
+      `<button class="btn" type="button" data-step="1" aria-label="${t('Thêm {name}', { name })}"${total >= LIMITS.maxRooms ? ' disabled' : ''}>+</button></span></li>`
     );
   }).join('');
 }
@@ -26,7 +27,7 @@ export function newProjectRowsHtml(counts: Counts): string {
 export function newProjectSummary(counts: Counts): { text: string; error: boolean } {
   const err = countsError(counts);
   if (err) return { text: err, error: true };
-  return { text: `${totalRooms(counts)} phòng · khoảng ${fm(totalArea(counts))} m² sàn (cỡ mặc định, đổi được sau)`, error: false };
+  return { text: t('{n} phòng · khoảng {area} m² sàn (cỡ mặc định, đổi được sau)', { n: totalRooms(counts), area: fm(totalArea(counts)) }), error: false };
 }
 
 export interface NewProjectDeps {
@@ -42,6 +43,8 @@ type NewEls = Pick<Els, 'dlgNew' | 'npName' | 'npList' | 'npSample' | 'npSummary
 /** Hộp thoại Dự án mới: chọn số phòng mỗi loại, đặt tên, có kèm đồ mẫu hay không. */
 export class NewProjectDialog {
   private counts: Counts = { ...DEFAULT_COUNTS };
+  /** Lần mở đầu tiên (nút Hủy ghi là "Dùng căn hộ mẫu"). */
+  private first = false;
 
   constructor(
     private readonly els: NewEls,
@@ -73,13 +76,24 @@ export class NewProjectDialog {
   /** first: lần mở đầu tiên (chưa có dự án nào), nút Hủy đổi thành "Dùng căn hộ mẫu". */
   open(first = false): void {
     const { els, deps } = this;
+    this.first = first;
     this.counts = { ...DEFAULT_COUNTS };
     els.npName.value = '';
     els.npSample.checked = false;
     els.npWarn.hidden = !deps.hasSaved();
-    els.npCancel.textContent = first ? 'Dùng căn hộ mẫu' : 'Hủy';
+    this.paintCancel();
     this.paint();
     openDialog(els.dlgNew);
+  }
+
+  /** Đổi ngôn ngữ: vẽ lại phần chữ do code dựng (danh sách phòng, tóm tắt, nút Hủy), kể cả khi hộp thoại đang đóng. */
+  languageChanged(): void {
+    this.paintCancel();
+    this.paint();
+  }
+
+  private paintCancel(): void {
+    this.els.npCancel.textContent = this.first ? t('Dùng căn hộ mẫu') : t('Hủy');
   }
 
   private paint(): void {

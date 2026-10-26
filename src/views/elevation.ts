@@ -121,7 +121,8 @@ export function renderElevation(i: ElevationInput): Frame {
     }
     const lock = it.locked ? lockGlyph(r.x0 + 9, Y(r.y1) + 9, 0) : '';
     o.push(
-      `<g class="it" data-uid="${it.uid}" tabindex="0" role="button" aria-label="${escapeHtml(t('{name}, {w} x {h} cm, cao {y} cm so với sàn', { name: tn(it.name), w: fm(it.w), h: fm(it.h), y: fm(it.y) }))}${it.locked ? escapeHtml(t(', đã khóa')) : ''}" style="cursor:${it.locked ? 'pointer' : 'move'}">` +
+      `<g class="it"${selected ? ' data-sel="true"' : ''} data-uid="${it.uid}" tabindex="0" role="button" aria-label="${escapeHtml(t('{name}, {w} x {h} cm, cao {y} cm so với sàn', { name: tn(it.name), w: fm(it.w), h: fm(it.h), y: fm(it.y) }))}${it.locked ? escapeHtml(t(', đã khóa')) : ''}" style="cursor:${it.locked ? 'pointer' : 'move'}">` +
+        (selected ? `<rect class="selring" x="${n2(r.x0 - 5)}" y="${n2(Y(r.y1) - 5)}" width="${it.w + 10}" height="${it.h + 10}" rx="5" style="fill:none;stroke:${ACCENT};stroke-width:2.5"/>` : '') +
         `<rect x="${n2(r.x0)}" y="${n2(Y(r.y1))}" width="${it.w}" height="${it.h}" rx="2" style="fill:${it.color};stroke:${stroke};stroke-width:${bad || selected ? 3 : 1.2}"/>${txt}${lock}</g>`,
     );
   }

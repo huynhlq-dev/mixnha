@@ -531,3 +531,94 @@ svg#plan.aptedit .aptroom:active {
   stroke-width: 2px;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
+
+/* breadcrumb ở đầu khung vẽ: Cả căn hộ › Phòng ngủ */
+.crumbsep {
+  color: var(--muted);
+  font-weight: 700;
+  align-self: center;
+  margin-inline: -4px;
+}
+#btnApt[hidden] + .crumbsep {
+  display: none;
+}
+
+/* gợi ý nhanh và thẻ hướng dẫn khi chưa có đồ nào */
+.tip {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 28px);
+  padding: 6px 6px 6px 14px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 13px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  /* nằm trên bản vẽ nhưng không chặn chuột, cảm ứng: chỉ nút × bấm được */
+  pointer-events: none;
+}
+.tip[hidden] {
+  display: none;
+}
+.tipx {
+  border: 0;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  line-height: 1;
+  background: rgba(127, 127, 127, 0.3);
+  color: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.emptycard {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 4;
+  width: min(480px, calc(100% - 28px));
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  /* thẻ nằm trên bản vẽ nhưng không chặn kéo thả: chỉ nút bấm được */
+  pointer-events: none;
+}
+.emptycard[hidden] {
+  display: none;
+}
+.emptycard .row {
+  pointer-events: auto;
+}
+.emptycard .steps {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .emptycard {
+    bottom: 10px;
+    padding: 10px 12px;
+  }
+  .emptycard .steps {
+    display: none;
+  }
+}
+
+/* món đang chọn: vòng viền màu chính + bóng, thêm vào ngoài viền màu của trạng thái (cam khi chồng lấn) */
+svg .it[data-sel] {
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35));
+}

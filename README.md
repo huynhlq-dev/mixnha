@@ -20,6 +20,7 @@ Xếp đồ nội thất cho căn hộ trên bản vẽ đúng tỉ lệ. Chạy
 - Trên máy tính, khung thiết kế tràn hết bề ngang và vừa khít chiều cao màn hình (không phải cuộn trang): bản vẽ 2D và khung 3D tự co giãn theo khung, hai cột bên cuộn riêng.
 - Dùng được trên điện thoại (thư viện dạng ngăn kéo, thanh nút dưới đáy, chạm và chụm hai ngón).
 - Trang **gallery** (`/gallery.html`): xem mọi món, kể cả món đang làm, ở cùng một tỉ lệ, kèm ảnh 3D và báo lỗi dữ liệu.
+- **Bố cục dễ nhìn (theo báo cáo UX/UI)**: thanh công cụ chia nhóm: Hoàn tác / Làm lại, nhóm hiển thị (Bám lưới, Hiện kích thước, Kích thước chi tiết) và menu **Khác** chứa hai nút phá hủy (Bố trí mẫu, Xóa hết; vẫn Hoàn tác được); điện thoại đưa "Khác" lên đầu dải nút. Hàng tab phòng bắt đầu bằng tab **Cả căn hộ** (được chọn khi xem cả căn), đầu khung vẽ là breadcrumb **Cả căn hộ › Phòng ngủ**, kiểu xem (Mặt bằng, Mặt đứng, 3D) là nhóm nút liền có biểu tượng, mục đang dùng màu chính. Hướng dẫn dài thu gọn thành "Mẹo" / "Hướng dẫn" bấm mới mở. **Gợi ý nhanh** (💡, mỗi gợi ý hiện một lần cho mỗi trình duyệt, đóng được, khóa `xepnha2d:tips`) và **thẻ hướng dẫn ba bước** khi căn hộ hoặc phòng chưa có món nào (nút Thêm đồ từ thư viện, Dự án mới có đồ mẫu). Món đang chọn có vòng viền màu chính cùng bóng nhẹ, vẫn thấy rõ khi viền món đang là màu cảnh báo chồng lấn. Danh sách phòng có biểu tượng loại phòng; số liệu căn hộ là ba ô lớn (số phòng, diện tích trong nhà, số món).
 - **Tiếng Việt và tiếng Anh**: nhóm nút **VI | EN** ở góc trên bên phải (cả trang thiết kế lẫn gallery; hộp thoại Dự án mới có thêm một nhóm nút vì hộp thoại chặn nút ngoài trang). Mặc định là tiếng Việt, không đoán theo trình duyệt; lựa chọn được nhớ (khóa `xepnha2d:lang`) và đổi ngay, không tải lại trang. Mọi chữ trên giao diện, thông báo, tên đồ, nhóm, loại phòng, cửa, màu, ghi chú, câu cảnh báo khi nhập file đều có bản tiếng Anh; số thập phân dùng dấu phẩy (Việt) hoặc dấu chấm (Anh). Tên phòng bạn tự đặt và nội dung ghi chú của bạn giữ nguyên. File `.json` xuất ra không phụ thuộc ngôn ngữ (tên phòng mặc định vẫn lưu bằng tiếng Việt, hiện ra theo ngôn ngữ đang chọn). Riêng báo lỗi kiểm tra dữ liệu đồ (`core/validate.ts`, dành cho người thêm đồ, hiện ở `npm run validate:items` và gallery) vẫn bằng tiếng Việt.
 
 ## Chạy
@@ -110,6 +111,7 @@ Thêm các thứ khác:
 | Thao tác | Phím / chuột |
 | --- | --- |
 | Hoàn tác, làm lại | `Ctrl/Cmd+Z`, `Ctrl/Cmd+Shift+Z` hoặc `Ctrl/Cmd+Y` |
+| Nhân đôi, sao chép, dán món đang chọn (dán được sang phòng khác, mỗi lần dán lệch thêm 20 cm; đồ gắn tường chỉ dán ở Mặt đứng, 3D) | `Ctrl/Cmd+D`, `Ctrl/Cmd+C`, `Ctrl/Cmd+V` |
 | Xóa món đang chọn (ở mô hình cả căn hộ, không chọn món nào mà đang bật Chỉnh bố cục và chọn một phòng: xóa phòng đó, Hoàn tác lấy lại) | `Delete`, `Backspace` |
 | Xoay món sàn | `R` (+90°), `Shift+R` (−90°) |
 | Xoay hướng mở cánh cửa đi | `R` (một nấc theo chiều kim đồng hồ), `Shift+R` (ngược lại); hoặc nút "Đổi bên bản lề" và "Mở ra ngoài" ở bảng bên phải |
@@ -120,6 +122,8 @@ Thêm các thứ khác:
 | Thoát toàn màn hình, đóng thư viện (điện thoại), tắt bút màu | `Esc` |
 | Phóng to bản vẽ | `Ctrl/Cmd` + cuộn chuột, nút `+` `−` `Vừa khung`, chụm hai ngón; kéo chỗ trống để dịch bản vẽ |
 | 3D | Kéo nền để xoay, cuộn hoặc chụm để phóng to, mũi tên xoay camera, `R` và `Delete` vẫn dùng cho món đang chọn |
+
+Nút **? Phím tắt** ở đầu khung vẽ mở bảng liệt kê các phím này ngay trong trang.
 
 Món đã khóa vẫn chọn và đổi màu được, nhưng không kéo, xoay, đổi số đo hay xóa được; các nút "Xóa đồ sàn / tường / cả phòng" bỏ qua món đã khóa.
 
@@ -133,7 +137,7 @@ Các điểm này nên cập nhật lại trong trang design:
 
 ## Test
 
-`npm test` chạy 491 test cho `core` (cả thêm, xóa, dời cửa đi, cửa sổ và hướng mở cánh), `data` (cả kiểm tra dữ liệu đồ, các loại cửa và bố trí mẫu), `storage` (lưu, file, migrations, Hoàn tác, nhắc sao lưu, cửa trong file), `viewport` (vùng nhìn, phóng to, kéo, bay vùng nhìn khi zoom), `apartment` (mô hình cả căn: xếp phòng, dời, đổi cỡ, chỗ đặt phòng mới, không chồng nhau), `rooms` (loại phòng, mã phòng, phòng mới), `project` (số phòng mỗi loại, dựng dự án mới), `interior` (diện tích trong nhà, hành lang), `overlap` (phòng chồng nhau: thứ tự lớp, phần còn thấy, giới hạn che), `balcony` (ban công, lan can, nhóm đồ ban công), `ui/newProject` (hộp thoại Dự án mới), `views` 2D, `scene3d`, `ui/theme` (đổi giao diện sáng, tối), `ui/keys` (phím tắt), `ui/library` (thư viện đồ dạng chọn nhóm), `ui/pen` (bút màu) và `ui/fullscreen` (toàn màn hình) và `i18n` (từ điển đủ và đúng khuôn, `t` / `tn`, dịch HTML tĩnh, nút VI | EN, chữ do code sinh ra bằng tiếng Anh). Trình duyệt thật đã được thử thủ công bằng Playwright (kéo thả, phím tắt, khóa, xuất / nhập, 3D, giao diện điện thoại).
+`npm test` chạy 512 test cho `core` (cả thêm, xóa, dời cửa đi, cửa sổ và hướng mở cánh), `data` (cả kiểm tra dữ liệu đồ, các loại cửa và bố trí mẫu), `storage` (lưu, file, migrations, Hoàn tác, nhắc sao lưu, cửa trong file), `viewport` (vùng nhìn, phóng to, kéo, bay vùng nhìn khi zoom), `apartment` (mô hình cả căn: xếp phòng, dời, đổi cỡ, chỗ đặt phòng mới, không chồng nhau), `rooms` (loại phòng, mã phòng, phòng mới), `project` (số phòng mỗi loại, dựng dự án mới), `interior` (diện tích trong nhà, hành lang), `overlap` (phòng chồng nhau: thứ tự lớp, phần còn thấy, giới hạn che), `balcony` (ban công, lan can, nhóm đồ ban công), `ui/newProject` (hộp thoại Dự án mới), `views` 2D, `scene3d`, `ui/theme` (đổi giao diện sáng, tối), `ui/keys` (phím tắt), `ui/library` (thư viện đồ dạng chọn nhóm), `ui/pen` (bút màu) và `ui/fullscreen` (toàn màn hình) `ui/menu` và `ui/tips` (menu Khác, gợi ý nhanh), sao chép / dán món (`core/layout`, `ui/keys`), vòng viền món đang chọn, và `i18n` (từ điển đủ và đúng khuôn, `t` / `tn`, dịch HTML tĩnh, nút VI | EN, chữ do code sinh ra bằng tiếng Anh). Trình duyệt thật đã được thử thủ công bằng Playwright (kéo thả, phím tắt, khóa, xuất / nhập, 3D, giao diện điện thoại).
 
 **Chưa có test** cho: các hàm sửa món trong `core/ops.ts` (thêm, xoay, dịch, đổi số đo, khóa; riêng phần cửa đã có test), các module `ui/` (nav, remind, bảng thuộc tính, hộp thoại xuất / nhập, `App`), kéo cửa bằng chuột trong `views/stage2d.ts` (đã thử thủ công trên trình duyệt thật; các hàm tính vị trí kéo thì có test), `gallery/` và `tools/report.ts`. Nên bổ sung khi sửa các phần đó; chúng đều viết dạng hàm thuần hoặc có giao diện hẹp nên dễ kiểm thử.
 

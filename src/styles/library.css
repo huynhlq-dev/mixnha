@@ -204,3 +204,19 @@
   font-size: 11.5px;
   color: var(--muted);
 }
+
+/* danh sách phòng: biểu tượng loại phòng, tên, cỡ và diện tích dễ quét */
+.aptitem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.aptitem .ico {
+  flex: none;
+  width: 28px;
+  font-size: 20px;
+  text-align: center;
+}
+.aptitem .txt {
+  min-width: 0;
+}

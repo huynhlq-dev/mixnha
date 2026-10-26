@@ -194,6 +194,12 @@ function sanitizeWall(raw: unknown, reg: Registry, t: Tally): WallItem | null {
 
 /* ---------- Cửa đi, cửa sổ ---------- */
 
+/** Cạnh lan can từ file hoặc bộ nhớ: danh sách cạnh hợp lệ (bỏ cạnh lạ và trùng, theo thứ tự trên, phải, dưới, trái). Không phải danh sách thì lấy mặc định của loại phòng. */
+function railsOr(raw: unknown, fallback: readonly WallKey[] | undefined): WallKey[] | undefined {
+  if (!Array.isArray(raw)) return fallback ? [...fallback] : undefined;
+  return WALL_KEYS.filter((w) => raw.includes(w));
+}
+
 const isWall = (v: unknown): v is WallKey => typeof v === 'string' && (WALL_KEYS as readonly string[]).includes(v);
 
 interface RoomBox {
@@ -303,6 +309,8 @@ export function sanitizeRoom(raw: unknown, def: RoomDef, reg: Registry, t: Tally
     doors: openingList(raw.doors, def.doors, (d) => fitOpening({ ...d, uid: 0 }, box.W, box.H), (r) => cleanDoor(r, box, t), t),
     windows: openingList(raw.windows, def.windows, (d) => fitOpening({ ...d, uid: 0 }, box.W, box.H), (r) => cleanWindow(r, box, t), t),
   };
+  const rails = railsOr(raw.rails, def.rails);
+  if (rails) layout.rails = rails;
   for (const r of itemsRaw) {
     const it = sanitizeFloor(r, reg, t);
     if (it) layout.items.push(it);
@@ -328,7 +336,7 @@ export function sanitizeSaved(raw: unknown, def: RoomDef, reg: Registry): Layout
 
 /**
  * Vị trí các phòng trong mô hình căn hộ, từ file hoặc dữ liệu tự lưu. Chỉ giữ phòng có mã hợp lệ (và nằm trong `ids` nếu có)
- * cùng hai số hữu hạn; làm tròn cm và kẹp trong khoảng hợp lý để bản vẽ không vỡ vì số quá lớn.
+ * cùng hai số hữu hạn (và thứ tự lớp z nếu có); làm tròn cm và kẹp trong khoảng hợp lý để bản vẽ không vỡ vì số quá lớn.
  * Không phải đối tượng thì coi như chưa có vị trí nào.
  */
 export function sanitizeApt(raw: unknown, ids?: readonly RoomId[]): AptPlan {
@@ -341,7 +349,13 @@ export function sanitizeApt(raw: unknown, ids?: readonly RoomId[]): AptPlan {
     const x = num(v.x);
     const y = num(v.y);
     if (x === null || y === null) continue;
-    out[id] = { x: Math.round(clamp(x, -FIELD_LIMITS.maxCoord, FIELD_LIMITS.maxCoord)), y: Math.round(clamp(y, -FIELD_LIMITS.maxCoord, FIELD_LIMITS.maxCoord)) };
+    const z = num(v.z);
+    out[id] = {
+      x: Math.round(clamp(x, -FIELD_LIMITS.maxCoord, FIELD_LIMITS.maxCoord)),
+      y: Math.round(clamp(y, -FIELD_LIMITS.maxCoord, FIELD_LIMITS.maxCoord)),
+      // thứ tự lớp: số nguyên không âm, bỏ nếu là 0 hoặc không hợp lệ
+      ...(z !== null && Math.round(z) > 0 ? { z: Math.min(10_000, Math.round(z)) } : {}),
+    };
   }
   return out;
 }

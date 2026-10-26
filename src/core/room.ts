@@ -16,6 +16,8 @@ export interface RoomGeo extends RoomSize {
   ceil: number;
   doors: DoorFit[];
   windows: WindowFit[];
+  /** Các cạnh làm lan can thay cho tường. */
+  rails: WallKey[];
   guides: { y: number; label: string }[];
 }
 
@@ -56,6 +58,7 @@ export function roomGeo(def: RoomDef, layout: Layout): RoomGeo {
       const f = fitOpening(d, W, H);
       return { ...f, sill: f.sill ?? 90, h: f.h ?? 120 };
     }),
+    rails: layout.rails ?? [],
     guides: def.guides ?? [],
   };
 }

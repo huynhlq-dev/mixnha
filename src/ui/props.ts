@@ -53,6 +53,7 @@ export function updateProps(els: Els, m: PropsModel): void {
   const { layout: l, sel, opening: op } = m;
   markSwatches(els.floorSw, l.floor);
   markSwatches(els.wallSw, l.wall);
+  for (const b of els.rails.querySelectorAll<HTMLElement>('[data-rail]')) b.setAttribute('aria-pressed', String((l.rails ?? []).includes(b.dataset.rail as WallKey)));
   setVal(els.rW, l.W);
   setVal(els.rH, l.H);
   setVal(els.rC, l.ceil);
@@ -116,6 +117,8 @@ export interface PropsApp {
   setOpening(field: 'pos' | 'w', raw: string, final: boolean): number | null;
   /** Chuyển cửa đang chọn sang tường khác. */
   setOpeningWall(wall: WallKey): void;
+  /** Bật hoặc tắt lan can ở một cạnh của phòng. */
+  toggleRail(wall: WallKey): void;
   /** Cửa đi đang chọn: đổi bên bản lề, hoặc đổi mở vào trong, ra ngoài. */
   flipDoorHinge(): void;
   toggleDoorSwing(): void;
@@ -168,6 +171,10 @@ export function bindProps(els: Els, app: PropsApp): void {
       if (v !== null) el.value = String(v);
     });
   }
+  els.rails.addEventListener('click', (e) => {
+    const w = (e.target as Element).closest<HTMLElement>('[data-rail]')?.dataset.rail;
+    if (isWallKey(w)) app.toggleRail(w);
+  });
   els.opDel.addEventListener('click', () => app.removeSelected());
   els.opFlip.addEventListener('click', () => app.flipDoorHinge());
   els.opSwing.addEventListener('click', () => app.toggleDoorSwing());

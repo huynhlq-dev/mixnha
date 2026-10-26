@@ -3,6 +3,7 @@ import { fm } from '../core/format';
 import type { Registry } from '../core/registry';
 import type { RoomGeo } from '../core/room';
 import type { Layout } from '../core/types';
+import type { Interior } from '../core/interior';
 import type { AptRoom } from './apartment';
 import type { Frame } from './frame';
 
@@ -23,8 +24,9 @@ export function describe3D(layout: Layout, R: RoomGeo, reg: Registry, failed: bo
 }
 
 /** Dòng tiêu đề và trạng thái của kiểu xem 3D cả căn hộ (chỉ để xem). */
-export function describeApartment3D(rooms: readonly AptRoom[], failed: boolean): Info3D {
-  const area = rooms.reduce((a, r) => a + (r.geo.W * r.geo.H) / 10000, 0);
+export function describeApartment3D(rooms: readonly AptRoom[], failed: boolean, interior?: Interior): Info3D {
+  // diện tích trong nhà: các phòng cộng khoảng trống kín giữa các phòng (hành lang) nếu đã tính
+  const area = interior ? interior.total : rooms.reduce((a, r) => a + (r.geo.W * r.geo.H) / 10000, 0);
   const status: Frame['status'] = failed
     ? { tone: 'good', text: 'Chưa dựng được 3D trên trình duyệt này. Mặt bằng cả căn hộ vẫn dùng bình thường.' }
     : { tone: 'good', text: 'Kéo để xoay 360°, cuộn hoặc chụm hai ngón để phóng to. 3D cả căn hộ chỉ để xem: muốn sửa đồ thì quay về Mặt bằng, hoặc zoom vào một phòng.' };

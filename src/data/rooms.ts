@@ -4,7 +4,7 @@ import type { RoomDef } from './schema';
  * Các LOẠI phòng trong thư viện (nhóm "Phòng"). Thứ tự ở đây là thứ tự trong thư viện.
  * Thêm loại mới: thêm mã vào đây và một mục trong ROOMS, rồi chạy npm run validate:items.
  */
-export const ROOM_TYPE_IDS = ['ngu', 'khach', 'bep', 'wc', 'lamviec', 'trong'] as const;
+export const ROOM_TYPE_IDS = ['ngu', 'khach', 'bep', 'wc', 'lamviec', 'trong', 'banchong'] as const;
 export type RoomTypeId = (typeof ROOM_TYPE_IDS)[number];
 
 /** Mã của căn hộ mặc định (bốn phòng đầu); mã mặc định cũng là mã loại phòng. */
@@ -145,6 +145,26 @@ export const ROOMS: Readonly<Record<RoomTypeId, RoomDef>> = {
     doors: [{ wall: 'B', pos: 110, w: 80 }],
     windows: [],
     sample: { floor: [], walls: {} },
+  },
+  banchong: {
+    id: 'banchong',
+    name: 'Ban công',
+    W: 300,
+    H: 150,
+    ceil: 270,
+    floor: 2,
+    doors: [],
+    // cạnh trên sát nhà có cửa kính; ba cạnh còn lại là lan can (đổi được ở mục Phòng)
+    windows: [{ wall: 'T', pos: 30, w: 240, sill: 0, h: 210 }],
+    rails: ['R', 'B', 'L'],
+    sample: {
+      floor: [
+        ['bal-set', 130, 85, 0],
+        ['plant', 270, 120, 0],
+        ['plant-s', 35, 125, 0],
+      ],
+      walls: {},
+    },
   },
 };
 

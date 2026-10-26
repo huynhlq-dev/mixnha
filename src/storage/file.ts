@@ -39,6 +39,8 @@ export interface FileRoom {
   /** pos là khoảng cách từ góc tới mép cửa (cm); mặt bằng: tường trên, dưới tính từ góc trái, tường trái, phải tính từ góc trên. */
   doors: NoUid<DoorItem>[];
   windows: NoUid<WindowItem>[];
+  /** Các cạnh làm lan can thay cho tường (ban công). Không ghi thì theo loại phòng. */
+  rails?: WallKey[];
 }
 
 export interface DesignFile {
@@ -100,6 +102,7 @@ export function toFileRoom(l: Layout): FileRoom {
     walls,
     doors: l.doors.map(stripUid),
     windows: l.windows.map(stripUid),
+    ...(l.rails ? { rails: [...l.rails] } : {}),
   };
 }
 

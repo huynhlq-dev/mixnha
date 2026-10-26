@@ -30,6 +30,9 @@ export interface ElevationInput {
 const INK = '#15211E';
 const ACCENT = 'var(--accent)';
 
+/** Chiều cao tay vịn lan can (cm). */
+const RAIL_HEIGHT = 100;
+
 /** Đồ sàn trong phạm vi này (cm) cách tường thì hiện mờ nét đứt trên mặt đứng. */
 const GHOST_RANGE = 100;
 
@@ -43,8 +46,16 @@ export function renderElevation(i: ElevationInput): Frame {
   const list = L.walls[wl];
   const o: string[] = [];
 
-  o.push(`<rect x="0" y="0" width="${len}" height="${C}" style="fill:${L.wall}"/>`);
+  // cạnh làm lan can: mặt tường trong suốt, chỉ có tay vịn và các trụ
+  const rail = R.rails.includes(wl);
+  o.push(`<rect x="0" y="0" width="${len}" height="${C}" style="fill:${L.wall}${rail ? ';fill-opacity:.15' : ''}"/>`);
   o.push(gridLines(len, C, true));
+  if (rail) {
+    let posts = '';
+    for (let s = 0; s <= len; s += 50) posts += `M${s} ${Y(0)}V${Y(RAIL_HEIGHT)}`;
+    posts += `M${len} ${Y(0)}V${Y(RAIL_HEIGHT)}`;
+    o.push(`<path d="${posts}" style="fill:none;stroke:${INK};stroke-width:1.5"/><path d="M0 ${Y(RAIL_HEIGHT)}H${len}M0 ${Y(RAIL_HEIGHT / 2)}H${len}" style="fill:none;stroke:${INK};stroke-width:3"/>`);
+  }
   o.push(`<rect x="-10" y="${C}" width="${len + 20}" height="10" style="fill:${L.floor};stroke:${INK};stroke-width:.8"/>`);
   o.push(`<rect x="-10" y="-10" width="${len + 20}" height="10" style="fill:#B8C0BD"/>`);
   o.push(

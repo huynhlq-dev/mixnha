@@ -70,15 +70,18 @@ export interface Layout {
   walls: Record<WallKey, WallItem[]>;
   doors: DoorItem[];
   windows: WindowItem[];
+  /** Các cạnh làm lan can thay cho tường (ban công). Không ghi thì theo loại phòng, loại phòng không khai báo thì cả bốn cạnh là tường. */
+  rails?: WallKey[];
 }
 
 export type Layouts = Record<RoomId, Layout>;
 
 /**
- * Vị trí của từng phòng trong mô hình căn hộ: góc trên trái (cm) theo hệ tọa độ chung của căn. Phòng chưa có vị trí thì
+ * Vị trí của từng phòng trong mô hình căn hộ: góc trên trái (cm) theo hệ tọa độ chung của căn, và z là thứ tự lớp khi các phòng
+ * chồng lên nhau (z lớn nằm trên, không ghi là 0; cùng z thì phòng đứng sau trong danh sách nằm trên). Phòng chưa có vị trí thì
  * được tự xếp theo lưới (views/apartment.ts). Không phải một phần của bản vẽ phòng nên không đi cùng Hoàn tác của phòng.
  */
-export type AptPlan = Partial<Record<RoomId, { x: number; y: number }>>;
+export type AptPlan = Partial<Record<RoomId, { x: number; y: number; z?: number }>>;
 
 /** Món đang chọn. */
 export interface Selection {

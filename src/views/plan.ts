@@ -25,6 +25,8 @@ export interface PlanInput {
   detail?: boolean;
   /** Vẽ gọn để đặt vào mô hình cả căn hộ: không lưới, không đường kích thước tổng của phòng, không vạch lối đi hẹp nhất. */
   compact?: boolean;
+  /** "things": chỉ vẽ cửa và đồ (không sàn, tường, lan can), dùng làm lớp bóng của phần phòng bị phòng khác che. Mặc định "all". */
+  layer?: 'all' | 'things';
 }
 
 const INK = '#15211E';
@@ -61,6 +63,31 @@ function openingDims(R: RoomSize, d: OpeningDef): string {
   return (
     (d.pos >= 1 ? seg(0, d.pos, fm(d.pos), ACCENT, true) : '') + seg(d.pos, end, `${fm(d.w)} cm`, ACCENT, false) + (len - end >= 1 ? seg(end, len, fm(len - end), ACCENT, true) : '')
   );
+}
+
+/** Khoảng cách giữa hai trụ lan can trên mặt bằng (cm). */
+const RAIL_POST_GAP = 40;
+
+/**
+ * Lan can thay cho tường ở các cạnh `rails`: xóa dải tường dày 10 cm ở cạnh đó (trả lại màu sàn), vẽ một nét lan can mảnh nằm giữa dải
+ * kèm các trụ nhỏ. Bốn ô vuông ở góc vẫn còn, như trụ góc.
+ */
+function railsSvg(R: RoomSize, rails: readonly WallKey[], floor: string): string {
+  const { W, H } = R;
+  const post = (x: number, y: number): string => `M${n2(x - 2.5)} ${n2(y - 2.5)}h5v5h-5z`;
+  const o: string[] = [];
+  for (const wl of rails) {
+    const horizontal = wl === 'T' || wl === 'B';
+    const len = horizontal ? W : H;
+    const c = wl === 'T' || wl === 'L' ? -5 : (horizontal ? H : W) + 5;
+    const band = horizontal ? `x="0" y="${n2(c - 5.5)}" width="${W}" height="11"` : `x="${n2(c - 5.5)}" y="0" width="11" height="${H}"`;
+    let posts = '';
+    for (let s = 0; s < len; s += RAIL_POST_GAP) posts += horizontal ? post(s, c) : post(c, s);
+    posts += horizontal ? post(len, c) : post(c, len);
+    const line = horizontal ? `M0 ${c}H${len}` : `M${c} 0V${len}`;
+    o.push(`<rect ${band} style="fill:${floor}"/><path d="${line}" style="fill:none;stroke:${INK};stroke-width:1.6"/><path d="${posts}" style="fill:${INK}"/>`);
+  }
+  return o.join('');
 }
 
 /** Nhãn trong món: tên (hoặc tên ngắn) và, nếu đủ chỗ, kích thước rộng × sâu. */
@@ -126,13 +153,18 @@ function rotationHandle(it: FloorItem): string {
 export function renderPlan(i: PlanInput): Frame {
   const { layout: L, R, reg, dim } = i;
   const { W, H } = R;
+  const things = i.layer === 'things';
+  const compact = !!i.compact || things;
   const selUid = i.sel?.scope === 'floor' ? i.sel.uid : null;
   const info = analysePlan(L, R, reg);
   const o: string[] = [];
 
-  o.push(`<rect x="0" y="0" width="${W}" height="${H}" style="fill:${L.floor}"/>`);
-  if (!i.compact) o.push(gridLines(W, H));
-  o.push(`<path fill-rule="evenodd" d="M-10 -10H${W + 10}V${H + 10}H-10Z M0 0V${H}H${W}V0Z" style="fill:${L.wall};stroke:${INK};stroke-opacity:.7;stroke-width:1"/>`);
+  if (!things) {
+    o.push(`<rect x="0" y="0" width="${W}" height="${H}" style="fill:${L.floor}"/>`);
+    if (!compact) o.push(gridLines(W, H));
+    o.push(`<path fill-rule="evenodd" d="M-10 -10H${W + 10}V${H + 10}H-10Z M0 0V${H}H${W}V0Z" style="fill:${L.wall};stroke:${INK};stroke-opacity:.7;stroke-width:1"/>`);
+    if (R.rails.length) o.push(railsSvg(R, R.rails, L.floor));
+  }
   // cửa đi, cửa sổ: chồng lên nhau thì viền cam, đang chọn thì viền xanh
   const overlap = overlappingOpenings(R);
   const opLook = (kind: OpeningKind, d: DoorItem): { col: string; hot: boolean } => {
@@ -183,7 +215,7 @@ export function renderPlan(i: PlanInput): Frame {
     );
   }
 
-  if (dim && info.gap && !i.compact) {
+  if (dim && info.gap && !compact) {
     const g = info.gap;
     const col = g.dist >= MIN_LANE ? 'var(--ok)' : 'var(--warn)';
     o.push(g.horizontal ? hdim(g.x0!, g.x1!, g.y!, fm(g.dist), col) : vdim(g.y0!, g.y1!, g.x!, fm(g.dist), col, 1));
@@ -192,7 +224,7 @@ export function renderPlan(i: PlanInput): Frame {
   const reach = outReach(R);
   const dimAt = (side: 'T' | 'L'): number => (reach[side] > 0 ? reach[side] + 14 : 30);
   const margin = (side: WallKey): number => (reach[side] > 0 ? Math.max(MARGIN, (side === 'T' || side === 'L' ? dimAt(side) : reach[side]) + 22) : MARGIN);
-  if (!i.compact) {
+  if (!compact) {
     o.push(hdim(0, W, -dimAt('T'), `${W} cm`, 'var(--muted)'));
     o.push(vdim(0, H, -dimAt('L'), `${H} cm`, 'var(--muted)', -1));
   }

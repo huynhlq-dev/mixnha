@@ -107,8 +107,9 @@
             <div class="legend" id="legend">
               <span><i class="dot" style="background: var(--accent)"></i>Đang chọn</span>
               <span><i class="dot" style="background: var(--warn)"></i>Chồng lấn, chắn cửa hoặc lối đi dưới 60 cm</span>
-              <span><i class="dot" style="background: var(--ok)"></i>Lối đi hẹp nhất từ 60 cm</span>
-              <span><i class="dot" style="background: transparent; border: 1px dashed var(--muted)"></i>Vùng mở cửa</span>
+              <span class="lg-room"><i class="dot" style="background: var(--ok)"></i>Lối đi hẹp nhất từ 60 cm</span>
+              <span class="lg-room"><i class="dot" style="background: transparent; border: 1px dashed var(--muted)"></i>Vùng mở cửa</span>
+              <span class="lg-apt"><i class="dot" style="background: var(--hall); border: 1px solid var(--line)"></i>Hành lang trong nhà (tính vào diện tích)</span>
             </div>
             </div>
           </div>
@@ -212,6 +213,16 @@
               </div>
               <div class="field"><span>Màu sàn</span><div class="swatches" id="floorSw"></div></div>
               <div class="field"><span>Màu tường</span><div class="swatches" id="wallSw"></div></div>
+              <div class="field">
+                <span>Lan can (cạnh không xây tường)</span>
+                <div class="tabs" id="rails" role="group" aria-label="Cạnh làm lan can">
+                  <button class="tab" type="button" data-rail="T" aria-pressed="false">Trên</button>
+                  <button class="tab" type="button" data-rail="R" aria-pressed="false">Phải</button>
+                  <button class="tab" type="button" data-rail="B" aria-pressed="false">Dưới</button>
+                  <button class="tab" type="button" data-rail="L" aria-pressed="false">Trái</button>
+                </div>
+                <p class="hint" style="margin: 2px 0 0">Dùng cho ban công: cạnh làm lan can không có tường, chỉ có tay vịn.</p>
+              </div>
               </div>
             </div>
             <div class="aptinfo" id="aptInfo" hidden>
@@ -220,7 +231,7 @@
                 <hr />
                 <h3 id="aptSelName"></h3>
                 <label class="field"><span>Tên phòng</span><input class="num" id="aptName" type="text" maxlength="40" autocomplete="off" spellcheck="false" aria-label="Tên phòng" style="font-family: var(--font)" /></label>
-                <p class="hint">Đổi kích thước, màu sàn, màu tường của phòng này ở mục Phòng phía trên. Bật "Chỉnh bố cục" để kéo phòng sang chỗ khác và kéo tay nắm đổi cỡ (phím mũi tên dời 10 cm, giữ Shift thì 50 cm, Delete xóa phòng).</p>
+                <p class="hint">Đổi kích thước, màu sàn, màu tường của phòng này ở mục Phòng phía trên. Bật "Chỉnh bố cục" để kéo phòng sang chỗ khác và kéo tay nắm đổi cỡ: phòng kéo đè lên phòng khác thì nằm trên và khuyết phần phòng dưới (phím mũi tên dời 10 cm, giữ Shift thì 50 cm, Delete xóa phòng).</p>
                 <div class="row" style="margin-top: 6px">
                   <button class="btn pri" id="aptEnter" type="button">Thiết kế phòng này</button>
                   <button class="btn danger" id="aptDel" type="button" title="Xóa phòng này khỏi căn hộ, kèm toàn bộ bản vẽ của phòng (Delete). Có thể Hoàn tác.">Xóa phòng</button>

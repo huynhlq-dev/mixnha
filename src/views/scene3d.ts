@@ -30,6 +30,8 @@ import { clamp, snapAngle, wallLength, boxOf } from '../core/geometry';
 import { canEdit, findItem, floorHeight, wallDepth } from '../core/layout';
 import { LIMITS } from '../core/limits';
 import { openingsOn, type RoomGeo } from '../core/room';
+import { coversOf } from '../core/overlap';
+import type { Box } from '../core/interior';
 import { roomTypeFromDragId } from '../core/rooms';
 import type { FloorItem, Layout, Selection, WallItem } from '../core/types';
 import { WALL_KEYS } from '../data/walls';
@@ -59,6 +61,9 @@ interface Rig {
 }
 
 const WALL_THICKNESS = 10;
+/** Lan can: chiều cao tay vịn (cm) và màu. */
+const RAIL_TOP = 104;
+const RAIL_COLOR = 0x8a949c;
 const MIN_DIST = 150;
 const MAX_DIST = 5000;
 const CLICK_SLOP = 5;
@@ -99,6 +104,40 @@ export function wallPieces(R: RoomGeo, wl: WallKey): { rects: [number, number, n
   }
   if (cur < len) rects.push([cur, len, 0, C]);
   return { rects, glass };
+}
+
+type Piece = [number, number, number, number];
+
+/**
+ * Các đoạn của một bức tường (theo vị trí dọc tường, cm) nằm dưới phòng khác nên không xây: những hộp `covers` (tọa độ của phòng, đã gồm tường
+ * của phòng che) chạm vào dải tường dày 10 cm của cạnh đó. Tường trên, phải tính từ trái, từ trên; tường dưới, trái tính ngược lại.
+ */
+function wallCuts(wl: WallKey, W: number, H: number, covers: readonly Box[]): [number, number][] {
+  const T = WALL_THICKNESS;
+  const band: Box = wl === 'T' ? { x: -T, y: -T, w: W + 2 * T, h: T } : wl === 'B' ? { x: -T, y: H, w: W + 2 * T, h: T } : wl === 'L' ? { x: -T, y: -T, w: T, h: H + 2 * T } : { x: W, y: -T, w: T, h: H + 2 * T };
+  const out: [number, number][] = [];
+  for (const c of covers) {
+    if (!(c.x < band.x + band.w && c.x + c.w > band.x && c.y < band.y + band.h && c.y + c.h > band.y)) continue;
+    out.push(wl === 'T' ? [c.x, c.x + c.w] : wl === 'B' ? [W - (c.x + c.w), W - c.x] : wl === 'R' ? [c.y, c.y + c.h] : [H - (c.y + c.h), H - c.y]);
+  }
+  return out;
+}
+
+/** Bỏ khỏi các mảnh tường những đoạn trong `cuts`. */
+function clipPieces(pieces: readonly Piece[], cuts: readonly [number, number][]): Piece[] {
+  let cur: Piece[] = pieces.map((p) => [...p] as Piece);
+  for (const [c0, c1] of cuts) {
+    const next: Piece[] = [];
+    for (const [a, b, lo, hi] of cur) {
+      if (c1 <= a || c0 >= b) next.push([a, b, lo, hi]);
+      else {
+        if (c0 > a) next.push([a, c0, lo, hi]);
+        if (c1 < b) next.push([c1, b, lo, hi]);
+      }
+    }
+    cur = next;
+  }
+  return cur;
 }
 
 /** Kích thước và tâm của một mảnh tường dày th. Tọa độ 3D: x ngang, y lên, z là chiều dọc của mặt bằng. */
@@ -427,18 +466,24 @@ export class Scene3D {
   private buildApartment(root: Group): void {
     const rooms = this.host.apartment();
     const rects = this.host.aptRects();
+    // phòng nằm trên che phòng nằm dưới: dựng từ dưới lên, mỗi lớp nâng nhẹ để sàn không chập vào nhau, và bỏ tường phòng dưới ở chỗ bị che
+    const stack = this.host.aptStack();
+    const covers = coversOf(rects, stack);
+    const byId = new Map(rooms.map((r) => [r.id, r]));
     let x0 = Infinity;
     let z0 = Infinity;
     let x1 = -Infinity;
     let z1 = -Infinity;
     let ceil = 0;
-    for (const room of rooms) {
-      const rc = rects[room.id];
-      if (!rc) continue;
+    for (const [layer, id] of stack.entries()) {
+      const room = byId.get(id);
+      const rc = rects[id];
+      if (!room || !rc) continue;
       const g = new Group();
-      g.position.set(rc.x, 0, rc.y);
+      g.position.set(rc.x, layer * 0.4, rc.y);
       root.add(g);
-      const rig = this.buildRoom(g, room.layout, room.geo, false);
+      const local = (covers[id] ?? []).map((c) => ({ x: c.x - rc.x, y: c.y - rc.y, w: c.w, h: c.h }));
+      const rig = this.buildRoom(g, room.layout, room.geo, false, local);
       rig.ox = rc.x;
       rig.oz = rc.y;
       x0 = Math.min(x0, rc.x);
@@ -461,9 +506,9 @@ export class Scene3D {
 
   /**
    * Dựng một phòng vào `parent` (tọa độ của phòng: góc trên trái là 0, 0). interactive: có nhãn để chọn món, khung chọn và khung cảnh báo,
-   * lưới nền riêng; không thì chỉ là hình để xem.
+   * lưới nền riêng; không thì chỉ là hình để xem. covers: các hộp của phòng nằm trên che phòng này (không xây tường ở chỗ bị che).
    */
-  private buildRoom(root: Group, L: Layout, R: RoomGeo, interactive: boolean): Rig {
+  private buildRoom(root: Group, L: Layout, R: RoomGeo, interactive: boolean, covers: readonly Box[] = []): Rig {
     const reg = this.host.registry;
     const v = this.host.view();
     const C = R.ceil;
@@ -514,30 +559,58 @@ export class Scene3D {
     for (const wl of WALL_KEYS) {
       const g = new Group();
       if (interactive) g.userData.tg = { t: 'wall', wl } satisfies Tag;
+      const cuts = wallCuts(wl, R.W, R.H, covers);
+      if (R.rails.includes(wl)) {
+        // lan can thay cho tường: không bị làm mờ khi quay camera, nên không nằm trong nhóm tường
+        this.railing(root, wl, R, cuts);
+        root.add(g);
+        walls[wl] = g;
+        continue;
+      }
       const pieces = wallPieces(R, wl);
-      for (const r of pieces.rects) {
+      for (const r of clipPieces(pieces.rects, cuts)) {
         const pl = placeWall(wl, R, r, WALL_THICKNESS);
         const m = addBox(g, pl.s[0], pl.s[1], pl.s[2], pl.p[0], pl.p[1], pl.p[2], paint);
         (m.material as Material).transparent = true;
       }
-      for (const r of pieces.glass) {
+      for (const r of clipPieces(pieces.glass, cuts)) {
         const pl = placeWall(wl, R, r, 2);
         addBox(root, pl.s[0], pl.s[1], pl.s[2], pl.p[0], pl.p[1], pl.p[2], 0xbfd7e3, { opacity: 0.35, noEdge: true });
       }
       root.add(g);
       walls[wl] = g;
     }
-    for (const [x, z] of [
-      [-5, -5],
-      [R.W + 5, -5],
-      [-5, R.H + 5],
-      [R.W + 5, R.H + 5],
+    const open = (a: WallKey, b: WallKey): boolean => R.rails.includes(a) && R.rails.includes(b);
+    for (const [x, z, a, b] of [
+      [-5, -5, 'T', 'L'],
+      [R.W + 5, -5, 'T', 'R'],
+      [-5, R.H + 5, 'B', 'L'],
+      [R.W + 5, R.H + 5, 'B', 'R'],
     ] as const) {
-      addBox(root, 10, C, 10, x, C / 2, z, shade(L.wall, 1.0));
+      // trụ góc nằm dưới phòng khác thì bỏ
+      if (covers.some((c) => x > c.x && x < c.x + c.w && z > c.y && z < c.y + c.h)) continue;
+      // góc giữa hai cạnh lan can chỉ là trụ cao bằng tay vịn
+      const h = open(a, b) ? RAIL_TOP : C;
+      addBox(root, 10, h, 10, x, h / 2, z, open(a, b) ? RAIL_COLOR : shade(L.wall, 1.0));
     }
     const rig: Rig = { ox: 0, oz: 0, W: R.W, H: R.H, walls, faded: { T: false, R: false, B: false, L: false } };
     this.rigs.push(rig);
     return rig;
+  }
+
+  /** Lan can ở một cạnh: tay vịn, thanh giữa và các trụ cách nhau 50 cm. */
+  private railing(root: Group, wl: WallKey, R: RoomGeo, cuts: readonly [number, number][] = []): void {
+    const len = wallLength(R, wl);
+    const bar = (a: number, b: number, lo: number, hi: number, th: number): void => {
+      for (const piece of clipPieces([[a, b, lo, hi]], cuts)) {
+        const pl = placeWall(wl, R, piece, th);
+        addBox(root, pl.s[0], pl.s[1], pl.s[2], pl.p[0], pl.p[1], pl.p[2], RAIL_COLOR);
+      }
+    };
+    bar(0, len, RAIL_TOP - 6, RAIL_TOP, 6);
+    bar(0, len, 45, 49, 2);
+    for (let s = 0; s < len; s += 50) bar(s - 1.5, s + 1.5, 0, RAIL_TOP - 6, 4);
+    bar(len - 1.5, len + 1.5, 0, RAIL_TOP - 6, 4);
   }
 
   private floorItem(it: FloorItem): Group {

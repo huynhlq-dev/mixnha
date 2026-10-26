@@ -122,6 +122,8 @@ export interface RoomDef {
   floor: number;
   doors: DoorDef[];
   windows: WindowDef[];
+  /** Các cạnh làm lan can (không xây tường), ví dụ ban công. Không ghi thì cả bốn cạnh là tường. */
+  rails?: WallKey[];
   /** Vạch tham chiếu trên mặt đứng, ví dụ mặt bếp cao 85 cm. */
   guides?: RoomGuide[];
   /** Bố trí mẫu. */

@@ -3,9 +3,13 @@ import { freshLayout } from '../src/core/layout';
 import { registry } from '../src/core/registry';
 import { roomGeo } from '../src/core/room';
 import { DEFAULT_ROOMS, ROOM_IDS, ROOMS, type RoomId } from '../src/data/rooms';
-import { APT_GAP, APT_GRID, APT_MAGNET, APT_MIN_GAP, APT_PAD, apartmentRects, aptOrder, freezePlan, handleSize, moveRoom, renderApartment, resizeRoom, roomAtPoint, roomSpot, roomsClash, roomViewInApartment, type AptRect, type AptRoom } from '../src/views/apartment';
+import { APT_GAP, APT_GRID, APT_MAGNET, APT_MIN_GAP, APT_PAD, apartmentRects, aptOrder, freezePlan, handleSize, moveOver, renderApartment, resizeOver, roomAtPoint, roomSpot, roomsClash, roomViewInApartment, snapRoom, snapSize, zOnTop, type AptRect, type AptRoom } from '../src/views/apartment';
+import { visibleEnough as visibleEnoughRaw } from '../src/core/overlap';
+const visibleEnough = (r: Record<RoomId, AptRect>, stack: RoomId[]): boolean => visibleEnoughRaw(r, stack);
 import { renderPlan } from '../src/views/plan';
 import { easeInOut, lerpView, parseView, viewToString } from '../src/views/viewport';
+import { fm } from '../src/core/format';
+import { interiorSpace } from '../src/core/interior';
 import { aptInfoHtml, aptListHtml } from '../src/ui/apartmentPanel';
 import { describeApartment3D } from '../src/views/info3d';
 import { roomTabsHtml } from '../src/ui/nav';
@@ -104,13 +108,15 @@ describe('vẽ mô hình căn hộ', () => {
   it('khung hình: tiêu đề, số phòng, tổng diện tích sàn, trạng thái, khung nhìn toàn căn', () => {
     const rs = rooms();
     const f = renderApartment(rs);
-    const total = rs.reduce((s, r) => s + (r.geo.W * r.geo.H) / 10000, 0);
+    // diện tích trong nhà = các phòng cộng hành lang (khoảng trống kín giữa các phòng)
+    const total = interiorSpace(Object.values(apartmentRects(sizes(rs)).rects)).total;
     expect(f.title).toBe('Cả căn hộ');
     expect(f.size).toBe('4 phòng');
     expect(f.area).toContain('m²');
     expect(f.status.tone).toBe('good');
     expect(f.status.text).toContain('Bấm vào một phòng');
     expect(f.status.text).toContain(`${Math.round(total * 10) / 10}`.replace('.', ','));
+    expect(f.area).toBe(`${(Math.round(total * 10) / 10).toString().replace('.', ',')} m²`);
     expect(f.bounds).toEqual(apartmentRects(sizes(rs)).bounds);
     expect(f.aria).toContain('4 phòng');
   });
@@ -205,8 +211,22 @@ describe('cột bên và tab khi xem cả căn hộ', () => {
     const rs = rooms();
     const html = aptInfoHtml(rs);
     expect(html).toContain('<dt>Số phòng</dt><dd>4</dd>');
-    expect(html).toContain('Diện tích sàn');
+    expect(html).toContain('<dt>Diện tích phòng</dt><dd>48,4 m²</dd>');
+    expect(html).toContain('<dt>Diện tích trong nhà</dt>');
     expect(html).toContain('Số món đồ');
+    // chưa tính khoảng trống thì không có dòng hành lang
+    expect(html).not.toContain('Hành lang');
+  });
+
+  it('số liệu tổng có hành lang: dòng hành lang và diện tích trong nhà = phòng + hành lang', () => {
+    const rs = rooms();
+    const interior = interiorSpace(Object.values(apartmentRects(sizes(rs)).rects));
+    const html = aptInfoHtml(rs, interior);
+    expect(interior.gaps).toBeGreaterThan(5);
+    expect(html).toContain('<dt>Hành lang, khoảng trống</dt>');
+    expect(html).toContain(`<dd>${fm(interior.gaps)} m²</dd>`);
+    expect(html).toContain(`<dd class="tot">${fm(interior.total)} m²</dd>`);
+    expect(html).toContain('được tính vào diện tích trong nhà');
   });
 
   it('hàng tab phòng: ở trong phòng thì phòng đó được chọn; xem cả căn thì không phòng nào được chọn', () => {
@@ -267,7 +287,7 @@ describe('vị trí đã chốt của phòng trong căn hộ', () => {
 });
 
 describe('dời phòng trong căn hộ', () => {
-  // ba phòng ở hàng ngang, cách nhau 100 cm: A 0..400, B 500..800 (300 rộng), C dưới cùng
+  // bốn phòng: ngu 0..400 x 0..350, khach 500..800 x 0..300, bep 0..320 x 500..820, wc 500..700 x 500..720
   const rectsOf = (): Record<RoomId, AptRect> =>
     ({
       ngu: { id: 'ngu', x: 0, y: 0, w: 400, h: 350 },
@@ -275,48 +295,61 @@ describe('dời phòng trong căn hộ', () => {
       bep: { id: 'bep', x: 0, y: 500, w: 320, h: 320 },
       wc: { id: 'wc', x: 500, y: 500, w: 200, h: 220 },
     }) as Record<RoomId, AptRect>;
+  const stackOf = (): RoomId[] => ['ngu', 'khach', 'bep', 'wc'];
 
   it('không bám lưới thì làm tròn cm và không hút gì', () => {
-    expect(moveRoom(rectsOf(), 'wc', { x: 833.4, y: 612.7 }, false)).toEqual({ x: 833, y: 613 });
+    expect(snapRoom(rectsOf(), 'wc', { x: 833.4, y: 612.7 }, false)).toEqual({ x: 833, y: 613 });
   });
 
   it('bám lưới 10 cm khi xa mép phòng khác', () => {
-    expect(moveRoom(rectsOf(), 'wc', { x: 1003, y: 628 }, true)).toEqual({ x: 1000, y: 630 });
+    expect(snapRoom(rectsOf(), 'wc', { x: 1003, y: 628 }, true)).toEqual({ x: 1000, y: 630 });
     expect(APT_GRID).toBe(10);
   });
 
   it('hút vào mép phòng khác: cùng mép trái, cùng mép trên, hoặc cách đúng APT_MIN_GAP', () => {
     // gần mép trái của ngu (x = 0): hút về 0
-    expect(moveRoom(rectsOf(), 'wc', { x: 9, y: 900 }, true).x).toBe(0);
+    expect(snapRoom(rectsOf(), 'wc', { x: 9, y: 900 }, true).x).toBe(0);
     // sát bên phải của khach (khach kết thúc ở 800): đặt cách 20
-    expect(moveRoom(rectsOf(), 'wc', { x: 812, y: 100 }, true)).toEqual({ x: 800 + APT_MIN_GAP, y: 100 });
+    expect(snapRoom(rectsOf(), 'wc', { x: 812, y: 100 }, true)).toEqual({ x: 800 + APT_MIN_GAP, y: 100 });
     // sát bên trái của khach: x + 200 + 20 = 500
-    expect(moveRoom(rectsOf(), 'wc', { x: 285, y: 1000 }, true).x).toBe(500 - 200 - APT_MIN_GAP);
+    expect(snapRoom(rectsOf(), 'wc', { x: 285, y: 1000 }, true).x).toBe(500 - 200 - APT_MIN_GAP);
     // cùng đáy với ngu: y + 220 = 350
-    expect(moveRoom(rectsOf(), 'wc', { x: 1200, y: 125 }, true).y).toBe(350 - 220);
+    expect(snapRoom(rectsOf(), 'wc', { x: 1200, y: 125 }, true).y).toBe(350 - 220);
     expect(APT_MAGNET).toBe(15);
   });
 
-  it('chạm phòng khác thì trượt dọc theo phòng đó: giữ phần đổi hợp lệ, bỏ phần gây chạm; cả hai đều chạm thì đứng yên', () => {
-    const r = rectsOf();
-    // wc đang ở (500,500). Kéo tới (700,100) thì chồng khach (500..800 x 0..300); nhưng chỉ đổi x (700,500) thì hợp lệ
-    expect(moveRoom(r, 'wc', { x: 700, y: 100 }, false)).toEqual({ x: 700, y: 500 });
-    // kéo tới (100,600) thì chồng bep (0..320 x 500..820); chỉ đổi x (100,500) vẫn chồng bep, nhưng chỉ đổi y (500,600) thì hợp lệ
-    expect(moveRoom(r, 'wc', { x: 100, y: 600 }, false)).toEqual({ x: 500, y: 600 });
-    // tới (300,250): chồng ngu; chỉ đổi x (300,500) chồng bep; chỉ đổi y (500,250) chồng khach: đứng yên
-    expect(moveRoom(r, 'wc', { x: 300, y: 250 }, false)).toEqual({ x: 500, y: 500 });
-    // chỗ mong muốn không chạm gì thì đi thẳng tới đó
-    expect(moveRoom(r, 'wc', { x: 900, y: 100 }, false)).toEqual({ x: 900, y: 100 });
+  it('chỗ trống thì đi thẳng tới chỗ mong muốn', () => {
+    expect(moveOver(rectsOf(), stackOf(), 'wc', { x: 500, y: 500 }, { x: 900, y: 100 }, false)).toEqual({ x: 900, y: 100 });
   });
 
-  it('kết quả không bao giờ chạm phòng khác, dù kéo kiểu nào', () => {
+  it('được đè lên phòng khác: phòng đang kéo nằm trên, miễn phòng bị đè còn đủ phần thấy', () => {
+    // wc (200 x 220) vào góc trên trái của ngu (400 x 350): ngu còn thấy 140000 - ~57000, nhiều hơn tối thiểu
+    expect(moveOver(rectsOf(), stackOf(), 'wc', { x: 500, y: 500 }, { x: 10, y: 10 }, false)).toEqual({ x: 10, y: 10 });
+  });
+
+  it('không được che hết một phòng: kéo ngu đè kín wc thì dừng ở chỗ hợp lệ trước đó', () => {
     const r = rectsOf();
-    const others = Object.values(r).filter((x) => x.id !== 'wc');
+    // ngu (400 x 350) dời tới (450, 450) sẽ che hẳn wc (500..700 x 500..720 chỉ 44 000 cm², phần còn thấy dưới 30 000)
+    const at = moveOver(r, stackOf(), 'ngu', { x: 0, y: 0 }, { x: 450, y: 450 }, false);
+    expect(at).toEqual({ x: 0, y: 0 });
+    expect(visibleEnough({ ...r, ngu: { ...r.ngu, ...at } }, ['khach', 'bep', 'wc', 'ngu'])).toBe(true);
+  });
+
+  it('kéo chéo vào chỗ không được thì trượt: giữ phần đổi hợp lệ, bỏ phần gây che quá nhiều', () => {
+    const r = rectsOf();
+    // ngu dời tới (450, 450) không được; chỉ đổi y (0, 450) thì hợp lệ (che phần dưới của bep? bep 0..320 x 500..820 chỉ bị che một phần)
+    const at = moveOver(r, stackOf(), 'ngu', { x: 0, y: 0 }, { x: 450, y: 450 }, false);
+    expect(visibleEnough({ ...r, ngu: { ...r.ngu, ...at } }, ['khach', 'bep', 'wc', 'ngu'])).toBe(true);
+  });
+
+  it('kết quả luôn để mọi phòng còn đủ phần thấy, dù kéo kiểu nào', () => {
+    const r = rectsOf();
+    const stack = stackOf();
     for (let x = -200; x <= 1200; x += 85) {
       for (let y = -200; y <= 1100; y += 85) {
         for (const snap of [true, false]) {
-          const at = moveRoom(r, 'wc', { x, y }, snap);
-          expect(others.some((o) => roomsClash({ ...r.wc, ...at }, o))).toBe(false);
+          const at = moveOver(r, stack, 'wc', { x: 500, y: 500 }, { x, y }, snap);
+          expect(visibleEnough({ ...r, wc: { ...r.wc, ...at } }, ['ngu', 'khach', 'bep', 'wc'])).toBe(true);
         }
       }
     }
@@ -331,55 +364,45 @@ describe('đổi cỡ phòng trong căn hộ', () => {
       bep: { id: 'bep', x: 0, y: 500, w: 320, h: 320 },
       wc: { id: 'wc', x: 900, y: 900, w: 200, h: 220 },
     }) as Record<RoomId, AptRect>;
+  const stack: RoomId[] = ['ngu', 'khach', 'bep', 'wc'];
 
   it('kẹp trong khoảng 150 đến 1500 cm', () => {
-    expect(resizeRoom(rectsOf(), 'wc', { w: 40, h: 40 }, false)).toEqual({ w: 150, h: 150 });
-    expect(resizeRoom(rectsOf(), 'wc', { w: 9000, h: 9000 }, false)).toEqual({ w: 1500, h: 1500 });
+    expect(snapSize(rectsOf(), 'wc', { w: 40, h: 40 }, false)).toEqual({ w: 150, h: 150 });
+    expect(snapSize(rectsOf(), 'wc', { w: 9000, h: 9000 }, false)).toEqual({ w: 1500, h: 1500 });
   });
 
   it('bám lưới: cạnh phải, dưới rơi vào bội của 10 (góc trên trái đứng yên)', () => {
     // wc ở (900, 900): rộng 303 thì cạnh phải = 1203 -> 1200, tức rộng 300
-    expect(resizeRoom(rectsOf(), 'wc', { w: 303, h: 417 }, true)).toEqual({ w: 300, h: 420 });
+    expect(snapSize(rectsOf(), 'wc', { w: 303, h: 417 }, true)).toEqual({ w: 300, h: 420 });
   });
 
   it('hút vào mép phòng khác: cạnh phải sát bên trái một phòng thì cách đúng APT_MIN_GAP', () => {
     const r = rectsOf();
-    r.wc = { id: 'wc', x: 100, y: 400, w: 200, h: 100 }; // dưới ngu? giữ y vừa
+    r.wc = { id: 'wc', x: 100, y: 400, w: 200, h: 100 };
     r.bep = { id: 'bep', x: 600, y: 400, w: 320, h: 320 };
     // mép trái bep ở 600: wc rộng sao cho cạnh phải = 580 -> rộng 480
-    expect(resizeRoom(r, 'wc', { w: 475, h: 150 }, true).w).toBe(580 - 100);
+    expect(snapSize(r, 'wc', { w: 475, h: 150 }, true).w).toBe(580 - 100);
   });
 
-  it('chạm phòng khác thì thử chỉ đổi một chiều, rồi giữ cỡ cũ', () => {
-    // wc ở (0,400) cỡ 300 x 80, ngu ở trên (đáy 350, còn 50 cm)
-    const mk = (extra: Partial<Record<RoomId, AptRect>>): Record<RoomId, AptRect> =>
-      ({
-        ngu: { id: 'ngu', x: 0, y: 0, w: 400, h: 350 },
-        wc: { id: 'wc', x: 0, y: 400, w: 300, h: 80 },
-        bep: { id: 'bep', x: 5000, y: 5000, w: 200, h: 200 },
-        khach: { id: 'khach', x: 6000, y: 6000, w: 200, h: 200 },
-        ...extra,
-      }) as Record<RoomId, AptRect>;
-    const below = { bep: { id: 'bep', x: 0, y: 500, w: 320, h: 320 } } as const; // vướng khi kéo cao
-    const right = { khach: { id: 'khach', x: 340, y: 380, w: 200, h: 120 } } as const; // vướng khi kéo rộng
-    // chỉ vướng phía dưới: kéo cả rộng lẫn cao thì giữ phần rộng, bỏ phần cao
-    expect(resizeRoom(mk(below), 'wc', { w: 350, h: 180 }, false)).toEqual({ w: 350, h: 80 });
-    // chỉ vướng bên phải: giữ phần cao, bỏ phần rộng
-    expect(resizeRoom(mk(right), 'wc', { w: 400, h: 150 }, false)).toEqual({ w: 300, h: 150 });
-    // vướng cả hai: giữ cỡ cũ
-    expect(resizeRoom(mk({ ...below, ...right }), 'wc', { w: 400, h: 180 }, false)).toEqual({ w: 300, h: 80 });
-    // không vướng gì thì đổi đúng như muốn
-    expect(resizeRoom(mk({}), 'wc', { w: 410, h: 200 }, false)).toEqual({ w: 410, h: 200 });
+  it('đổi cỡ đè lên phòng khác được, miễn phòng bị đè còn đủ phần thấy', () => {
+    const r = { ngu: { id: 'ngu', x: 0, y: 0, w: 400, h: 350 }, khach: { id: 'khach', x: 500, y: 0, w: 400, h: 350 } } as Record<RoomId, AptRect>;
+    // ngu rộng ra 600: che 100 cm đầu của khach (che cả tường), khach còn thấy 400 x 350 - phần che, đủ
+    expect(resizeOver(r, ['ngu', 'khach'], 'ngu', { w: 400, h: 350 }, { w: 600, h: 350 }, false)).toEqual({ w: 600, h: 350 });
   });
 
-  it('kết quả không bao giờ chạm phòng khác', () => {
+  it('đổi cỡ làm che quá nhiều thì giữ cỡ trước đó', () => {
+    const r = { ngu: { id: 'ngu', x: 0, y: 0, w: 400, h: 350 }, khach: { id: 'khach', x: 500, y: 0, w: 200, h: 200 } } as Record<RoomId, AptRect>;
+    // khach chỉ 200 x 200 = 40 000: ngu rộng tới 650 sẽ che gần hết nó
+    expect(resizeOver(r, ['ngu', 'khach'], 'ngu', { w: 400, h: 350 }, { w: 650, h: 350 }, false)).toEqual({ w: 400, h: 350 });
+  });
+
+  it('kết quả luôn để mọi phòng còn đủ phần thấy', () => {
     const r = rectsOf();
-    const others = Object.values(r).filter((x) => x.id !== 'wc');
     for (let w = 100; w <= 1400; w += 130) {
       for (let h = 100; h <= 1400; h += 130) {
         for (const snap of [true, false]) {
-          const to = resizeRoom(r, 'wc', { w, h }, snap);
-          expect(others.some((o) => roomsClash({ ...r.wc, ...to }, o))).toBe(false);
+          const to = resizeOver(r, stack, 'wc', { w: 200, h: 220 }, { w, h }, snap);
+          expect(visibleEnough({ ...r, wc: { ...r.wc, ...to } }, stack)).toBe(true);
           expect(to.w).toBeGreaterThanOrEqual(150);
           expect(to.h).toBeGreaterThanOrEqual(150);
         }
@@ -400,7 +423,7 @@ describe('vẽ mô hình khi chỉnh bố cục', () => {
   it('chỉnh bố cục nhưng chưa chọn phòng nào: chưa có tay nắm', () => {
     const f = renderApartment(rooms(), { edit: true });
     expect(f.svg).not.toContain('apthandle');
-    expect(f.status.text).toContain('Chỉnh bố cục căn hộ');
+    expect(f.status.text).toContain('Chỉnh bố cục');
     expect(f.aria).toContain('Đang chỉnh bố cục');
   });
 
@@ -427,14 +450,109 @@ describe('vẽ mô hình khi chỉnh bố cục', () => {
     expect(f.svg).toContain('translate(1234 56)');
   });
 
-  it('phòng chồng nhau: viền cam và báo trạng thái; hết chồng thì thôi', () => {
-    const over = renderApartment(rooms(), { plan: { ngu: { x: 100, y: 100 }, khach: { x: 200, y: 150 }, bep: { x: 2000, y: 0 }, wc: { x: 2000, y: 900 } } });
-    expect(over.status.tone).toBe('bad');
-    expect(over.status.text).toContain('chồng lên nhau');
-    expect((over.svg.match(/data-clash="true"/g) ?? []).length).toBe(2);
-    const ok = renderApartment(rooms());
-    expect(ok.status.tone).toBe('good');
-    expect(ok.svg).not.toContain('data-clash');
+  it('phòng chồng nhau không còn báo lỗi: phòng nằm trên khuyết phòng dưới, phòng dưới ghi diện tích còn thấy', () => {
+    const rs = rooms();
+    // wc (200 x 220) đặt trong góc ngu (400 x 350)
+    const f = renderApartment(rs, { plan: { ngu: { x: 0, y: 0 }, khach: { x: 2000, y: 0 }, bep: { x: 2000, y: 900 }, wc: { x: 10, y: 10, z: 1 } } });
+    expect(f.svg).not.toContain('data-clash');
+    expect(f.svg).toContain('data-room="ngu" data-carved="true"');
+    expect(f.svg).not.toContain('data-room="wc" data-carved');
+    // ngu mất phần wc chiếm (cả tường 10 cm): ghi diện tích nhỏ hơn 14 m²
+    const nguSize = /data-room="ngu".*?400 × 350 cm · ([\d,]+) m²/s.exec(f.svg)?.[1];
+    expect(Number(nguSize!.replace(',', '.'))).toBeLessThan(14);
+    expect(Number(nguSize!.replace(',', '.'))).toBeGreaterThan(8);
+  });
+
+  it('phòng nằm trên vẽ sau (đè lên) phòng nằm dưới; z lớn hơn thì lên trên dù đứng trước trong danh sách', () => {
+    const rs = rooms();
+    const plan = { ngu: { x: 0, y: 0, z: 5 }, khach: { x: 300, y: 100, z: 1 }, bep: { x: 2000, y: 0 }, wc: { x: 2000, y: 900 } };
+    const f = renderApartment(rs, { plan });
+    expect(f.svg.indexOf('data-room="khach"')).toBeLessThan(f.svg.indexOf('data-room="ngu"'));
+  });
+});
+
+describe('thứ tự lớp của phòng', () => {
+  it('apartmentRects trả về thứ tự lớp: z nhỏ ở dưới, cùng z thì phòng đứng sau trong danh sách nằm trên', () => {
+    const rs = rooms();
+    const ids = rs.map((r) => r.id);
+    expect(apartmentRects(sizes(rs), ids).stack).toEqual(ids);
+    expect(apartmentRects(sizes(rs), ids, { khach: { x: 0, y: 0, z: 2 }, ngu: { x: 0, y: 0, z: 1 } }).stack).toEqual(['bep', 'wc', 'ngu', 'khach']);
+  });
+
+  it('freezePlan giữ thứ tự lớp đã có', () => {
+    const rs = rooms();
+    const rects = apartmentRects(sizes(rs), rs.map((r) => r.id)).rects;
+    const plan = freezePlan(rects, { ngu: { x: 0, y: 0, z: 3 } });
+    expect(plan.ngu!.z).toBe(3);
+    expect(plan.khach).not.toHaveProperty('z');
+  });
+
+  it('zOnTop: chồng lên phòng nào thì nằm trên phòng đó; không chồng thì giữ z hiện có', () => {
+    const rects = { a: { id: 'a', x: 0, y: 0, w: 400, h: 350 }, b: { id: 'b', x: 10, y: 10, w: 200, h: 220 }, c: { id: 'c', x: 2000, y: 0, w: 300, h: 300 } } as Record<RoomId, AptRect>;
+    expect(zOnTop(rects, { a: { x: 0, y: 0, z: 2 } }, 'b')).toBe(3);
+    expect(zOnTop(rects, {}, 'b')).toBe(1);
+    // đã nằm trên rồi thì giữ nguyên
+    expect(zOnTop(rects, { a: { x: 0, y: 0, z: 2 }, b: { x: 10, y: 10, z: 7 } }, 'b')).toBe(7);
+    // không chồng phòng nào
+    expect(zOnTop(rects, { c: { x: 2000, y: 0, z: 4 } }, 'c')).toBe(4);
+    expect(zOnTop(rects, {}, 'c')).toBeUndefined();
+  });
+
+  it('roomAtPoint có thứ tự lớp thì lấy phòng nằm trên cùng, kể cả điểm trong vùng bị khuyết', () => {
+    const rects = { a: { id: 'a', x: 0, y: 0, w: 400, h: 350 }, b: { id: 'b', x: 10, y: 10, w: 200, h: 220 } } as Record<RoomId, AptRect>;
+    expect(roomAtPoint(rects, { x: 100, y: 100 }, 0, ['a', 'b'])).toBe('b');
+    expect(roomAtPoint(rects, { x: 100, y: 100 }, 0, ['b', 'a'])).toBe('a');
+    expect(roomAtPoint(rects, { x: 300, y: 300 }, 0, ['a', 'b'])).toBe('a');
+  });
+});
+
+describe('bóng đồ bị phòng khác che', () => {
+  const full = (over: Partial<NonNullable<Parameters<typeof renderApartment>[1]>['items']> = {}) => ({ reg: registry, room: null, sel: null, opening: null, dim: false, detail: false, ...over });
+  const carvedPlan = { ngu: { x: 0, y: 0 }, khach: { x: 2000, y: 0 }, bep: { x: 2000, y: 900 }, wc: { x: 10, y: 10, z: 1 } };
+
+  it('đồ của phòng dưới nằm trong vùng bị che được vẽ lại thành lớp bóng cắt theo vùng đó, nằm sau cùng', () => {
+    const rs = rooms();
+    const f = renderApartment(rs, { plan: carvedPlan, items: full() });
+    expect(f.svg).toContain('<clipPath id="aptcut-ngu">');
+    expect(f.svg).toContain('class="aptghost" data-room="ngu"');
+    expect(f.svg).toContain('clip-path="url(#aptcut-ngu)"');
+    // lớp bóng đứng sau mọi phòng nên bấm được
+    expect(f.svg.indexOf('class="aptghost"')).toBeGreaterThan(f.svg.lastIndexOf('class="aptroom"'));
+    // chỉ có phòng dưới bị che mới có bóng
+    expect(f.svg).not.toContain('aptcut-wc');
+  });
+
+  it('bóng chỉ có đồ và cửa, không có sàn hay tường (phòng nằm trên không bị phủ thêm màu sàn)', () => {
+    const rs = rooms();
+    const f = renderApartment(rs, { plan: carvedPlan, items: full() });
+    const ghost = f.svg.slice(f.svg.indexOf('class="aptghost"'));
+    expect(ghost).toContain('class="it"');
+    expect(ghost).not.toContain('fill-rule="evenodd"');
+  });
+
+  it('không có phòng nào bị che thì không có bóng', () => {
+    const f = renderApartment(rooms(), { items: full() });
+    expect(f.svg).not.toContain('aptghost');
+    expect(f.svg).not.toContain('clipPath');
+  });
+
+  it('trạng thái báo món của phòng dưới nằm dưới phòng khác (nếu có món bị che)', () => {
+    const rs = rooms();
+    // đặt một món ngay dưới wc
+    rs.find((r) => r.id === 'ngu')!.layout.items.push({ ...rs.find((r) => r.id === 'ngu')!.layout.items[0]!, uid: 9001, x: 100, y: 100 });
+    const f = renderApartment(rs, { plan: carvedPlan, items: full() });
+    expect(f.status.tone).toBe('bad');
+    expect(f.status.text).toContain('nằm dưới phòng khác');
+    expect(f.status.text).toContain('Phòng ngủ');
+  });
+
+  it('diện tích trong nhà không đếm hai lần phần chồng nhau', () => {
+    const rs = rooms();
+    const sep = renderApartment(rs, { plan: { ngu: { x: 0, y: 0 }, khach: { x: 2000, y: 0 }, bep: { x: 2000, y: 900 }, wc: { x: 0, y: 2000 } } });
+    const over = renderApartment(rs, { plan: carvedPlan });
+    const total = (a: string) => Number(a.replace(' m²', '').replace(',', '.'));
+    // wc 4,4 m² nằm trong ngu: tổng giảm đúng phần ngu mất (gồm tường) so với khi wc ở ngoài
+    expect(total(over.area)).toBeLessThan(total(sep.area) - 0.5);
   });
 });
 
@@ -545,8 +663,9 @@ describe('mô hình vẽ đủ đồ và cửa (sửa được ngay)', () => {
   it('trạng thái khi ổn: hướng dẫn kéo đồ thả vào phòng', () => {
     const f = renderApartment(rooms(), { items: full() });
     expect(f.status.tone).toBe('good');
-    expect(f.status.text).toContain('Kéo đồ từ thư viện');
+    expect(f.status.text).toContain('Kéo đồ vào phòng');
     expect(f.status.text).toContain('4 phòng');
+    expect(f.status.text).toContain('hành lang');
   });
 });
 
@@ -588,5 +707,53 @@ describe('dòng thông tin 3D cả căn hộ', () => {
 
   it('không dựng được WebGL thì báo, mặt bằng vẫn dùng được', () => {
     expect(describeApartment3D(rooms(), true).status.text).toContain('Chưa dựng được 3D');
+  });
+});
+
+describe('hành lang trên mô hình cả căn', () => {
+  it('khe kín giữa các phòng được tô nền hành lang (nằm dưới các phòng) và cộng vào diện tích', () => {
+    const rs = rooms();
+    const f = renderApartment(rs);
+    const interior = interiorSpace(Object.values(apartmentRects(sizes(rs)).rects));
+    expect(f.svg).toContain('class="aptinterior"');
+    expect((f.svg.match(/<g class="aptinterior">(.*?)<\/g>/)?.[1].match(/<rect/g) ?? []).length).toBe(interior.bands.length);
+    expect(f.svg.indexOf('class="aptinterior"')).toBeLessThan(f.svg.indexOf('class="aptroom"'));
+    expect(f.svg.indexOf('class="aptbase"')).toBeLessThan(f.svg.indexOf('class="aptinterior"'));
+    expect(f.status.text).toContain('hành lang');
+    expect(f.area).toBe(`${fm(interior.total)} m²`);
+  });
+
+  it('phòng xa nhau, không có khe kín: không có nền hành lang, diện tích chỉ là các phòng', () => {
+    const rs = rooms();
+    const plan = { ngu: { x: 0, y: 0 }, khach: { x: 3000, y: 0 }, bep: { x: 0, y: 3000 }, wc: { x: 3000, y: 3000 } };
+    const f = renderApartment(rs, { plan });
+    expect(f.svg).not.toContain('aptinterior');
+    expect(f.area).toBe('48,4 m²');
+    expect(f.status.text).not.toContain('hành lang');
+  });
+
+  it('thêm phòng sát vào thì diện tích trong nhà tăng đúng bằng phòng cộng khe mới', () => {
+    const rs = rooms();
+    const a = renderApartment(rs);
+    const total = (s: string) => Number(s.replace(' m²', '').replace(',', '.'));
+    expect(total(a.area)).toBeGreaterThan(48.4);
+  });
+});
+
+describe('phòng bị che gần hết', () => {
+  it('báo ở dòng trạng thái khi phòng chỉ còn thấy dưới 3 m²', () => {
+    const rs = rooms();
+    // ngu (400 x 350) nằm dưới khach (đè kín nó): ngu còn thấy rất ít
+    const f = renderApartment(rs, { plan: { ngu: { x: 100, y: 100 }, khach: { x: 0, y: 0, z: 1 }, bep: { x: 3000, y: 0 }, wc: { x: 3000, y: 900 } } });
+    expect(f.status.tone).toBe('bad');
+    expect(f.status.text).toContain('Phòng ngủ');
+    expect(f.status.text).toContain('che gần hết');
+  });
+
+  it('phòng nhỏ không bị che thì không bị báo, dù chưa tới 3 m²', () => {
+    const rs = rooms();
+    rs.find((r) => r.id === 'wc')!.geo = { ...rs.find((r) => r.id === 'wc')!.geo, W: 150, H: 150 };
+    const f = renderApartment(rs, { plan: { ngu: { x: 0, y: 0 }, khach: { x: 1000, y: 0 }, bep: { x: 2000, y: 0 }, wc: { x: 3000, y: 0 } } });
+    expect(f.status.text).not.toContain('che gần hết');
   });
 });

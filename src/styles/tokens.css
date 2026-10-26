@@ -13,6 +13,8 @@
   --warn: #c2410c;
   --ok: #0f7a4b;
   --grid: #dde4e1;
+  /* nền hành lang, khoảng trống kín giữa các phòng (tính vào diện tích trong nhà) */
+  --hall: #dfe5d8;
   --font: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
 }
@@ -30,5 +32,6 @@
   --warn: #fb923c;
   --ok: #4ade80;
   --grid: #26332f;
+  --hall: #2b3a30;
   color-scheme: dark;
 }

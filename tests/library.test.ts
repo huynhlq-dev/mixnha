@@ -11,9 +11,9 @@ describe('nhóm trong thư viện theo kiểu xem', () => {
     const elev = libraryGroups(registry, 'elev', '');
     const all = libraryGroups(registry, '3d', '');
     const tail = ['open-door', 'open-win', 'rooms'];
-    expect(plan.map((g) => g.id)).toEqual(['sleeping', 'living', 'dining', 'work', 'bathroom', ...tail]);
+    expect(plan.map((g) => g.id)).toEqual(['sleeping', 'living', 'dining', 'work', 'bathroom', 'balcony', ...tail]);
     expect(elev.map((g) => g.id)).toEqual(['wall-kitchen', 'wall-hang', 'wall-tall', ...tail]);
-    expect(all.map((g) => g.id)).toEqual(['sleeping', 'living', 'dining', 'work', 'bathroom', 'wall-kitchen', 'wall-hang', 'wall-tall', ...tail]);
+    expect(all.map((g) => g.id)).toEqual(['sleeping', 'living', 'dining', 'work', 'bathroom', 'balcony', 'wall-kitchen', 'wall-hang', 'wall-tall', ...tail]);
     expect(all.find((g) => g.id === 'wall-hang')!.title).toBe('Gắn tường: treo');
     expect(elev.find((g) => g.id === 'wall-hang')!.title).toBe('Treo tường');
   });
@@ -162,7 +162,7 @@ describe('nhóm cửa đi và cửa sổ trong thư viện', () => {
 
   it('tìm kiếm tìm được cửa theo tên (không dấu) và theo tên nhóm', () => {
     expect(libraryGroups(registry, 'plan', 'cua so').map((g) => g.id)).toEqual(['open-win']);
-    expect(libraryGroups(registry, 'plan', 'kinh').flatMap((g) => g.items.map((i) => i.id))).toEqual(['win200']);
+    expect(libraryGroups(registry, 'plan', 'kinh').flatMap((g) => g.items.map((i) => i.id))).toEqual(['win200', 'bal180', 'bal240']);
     expect(libraryGroups(registry, 'plan', 'cua di').map((g) => g.id)).toContain('open-door');
   });
 
@@ -192,7 +192,7 @@ describe('nhóm Phòng trong thư viện', () => {
 
   it('mặt bằng cả căn hộ có cùng danh sách với mặt bằng một phòng (đồ sàn, cửa, phòng); 3D cả căn chỉ có nhóm Phòng', () => {
     expect(libraryGroups(registry, 'apartment', '')).toEqual(libraryGroups(registry, 'plan', ''));
-    expect(libraryGroups(registry, 'apartment', '').map((g) => g.id)).toEqual(['sleeping', 'living', 'dining', 'work', 'bathroom', 'open-door', 'open-win', 'rooms']);
+    expect(libraryGroups(registry, 'apartment', '').map((g) => g.id)).toEqual(['sleeping', 'living', 'dining', 'work', 'bathroom', 'balcony', 'open-door', 'open-win', 'rooms']);
     expect(libraryGroups(registry, 'apartment3d', '').map((g) => g.id)).toEqual(['rooms']);
     expect(rooms('apartment3d')!.title).toBe('Phòng');
     expect(libraryGroups(registry, 'plan', '').at(-1)!.id).toBe('rooms');

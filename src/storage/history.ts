@@ -2,7 +2,8 @@ import { LIMITS } from '../core/limits';
 import type { Layout } from '../core/types';
 import type { RoomId } from '../data/rooms';
 
-interface RoomHistory {
+/** Lịch sử của một phòng: các bước lùi, các bước tiến, và ảnh chụp bố trí hiện tại. */
+export interface RoomHistory {
   undo: string[];
   redo: string[];
   /** Ảnh chụp (JSON) của bố trí hiện tại. */
@@ -75,6 +76,18 @@ export class History {
   /** Thêm một phòng mới (hoặc phòng vừa lấy lại): lịch sử riêng, lấy bố trí này làm điểm xuất phát. */
   add(room: RoomId, layout: Layout): void {
     this.rooms.set(room, { undo: [], redo: [], cur: JSON.stringify(layout) });
+    if (this.lastRoom === room) this.lastContinuous = false;
+  }
+
+  /** Bản sao lịch sử của một phòng (để cất lại khi phòng bị xóa hoặc bỏ đi, rồi khôi phục khi phòng trở lại). Phòng chưa có lịch sử thì null. */
+  snapshot(room: RoomId): RoomHistory | null {
+    const h = this.rooms.get(room);
+    return h ? { undo: [...h.undo], redo: [...h.redo], cur: h.cur } : null;
+  }
+
+  /** Đặt lại lịch sử của một phòng từ bản đã cất bằng snapshot. */
+  restore(room: RoomId, h: RoomHistory): void {
+    this.rooms.set(room, { undo: [...h.undo], redo: [...h.redo], cur: h.cur });
     if (this.lastRoom === room) this.lastContinuous = false;
   }
 

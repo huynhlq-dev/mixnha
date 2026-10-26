@@ -7,6 +7,7 @@ export const CATEGORIES: readonly CategoryDef[] = [
   { id: 'dining', name: 'Ăn uống & bếp', place: 'floor' },
   { id: 'work', name: 'Làm việc', place: 'floor' },
   { id: 'bathroom', name: 'Vệ sinh', place: 'floor' },
+  { id: 'balcony', name: 'Ban công & sân', place: 'floor' },
   { id: 'wall-kitchen', name: 'Bếp (nhìn thẳng)', place: 'wall', label3d: 'Gắn tường: bếp' },
   { id: 'wall-hang', name: 'Treo tường', place: 'wall', label3d: 'Gắn tường: treo' },
   { id: 'wall-tall', name: 'Đứng sàn', place: 'wall', label3d: 'Gắn tường: tủ cao' },

@@ -2,12 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LIMITS } from '../src/core/limits';
 import { newProjectRowsHtml, newProjectSummary, NewProjectDialog } from '../src/ui/newProject';
 
-const counts = (over: Partial<Record<'ngu' | 'khach' | 'bep' | 'wc' | 'lamviec' | 'trong', number>> = {}) => ({ ngu: 1, khach: 1, bep: 1, wc: 1, lamviec: 0, trong: 0, ...over });
+const counts = (over: Partial<Record<'ngu' | 'khach' | 'bep' | 'wc' | 'lamviec' | 'trong' | 'banchong', number>> = {}) => ({ ngu: 1, khach: 1, bep: 1, wc: 1, lamviec: 0, trong: 0, banchong: 0, ...over });
 
 describe('hàng chọn số phòng', () => {
   it('mỗi loại một hàng, ghi số hiện tại và cỡ mặc định', () => {
     const html = newProjectRowsHtml(counts({ ngu: 2 }));
-    expect((html.match(/class="nprow"/g) ?? []).length).toBe(6);
+    expect((html.match(/class="nprow"/g) ?? []).length).toBe(7);
+    expect(html).toContain('data-type="banchong"');
     expect(html).toContain('data-type="ngu"');
     expect(html).toMatch(/Số Phòng ngủ">2</);
     expect(html).toContain('400 × 350 cm');
@@ -20,7 +21,7 @@ describe('hàng chọn số phòng', () => {
     expect(row('ngu')).not.toContain('data-step="-1" aria-label="Bớt Phòng ngủ" disabled');
     expect(row('ngu')).not.toContain('Thêm Phòng ngủ" disabled');
     const full = newProjectRowsHtml(counts({ ngu: LIMITS.maxRooms - 3 }));
-    expect((full.match(/data-step="1"[^>]* disabled/g) ?? []).length).toBe(6);
+    expect((full.match(/data-step="1"[^>]* disabled/g) ?? []).length).toBe(7);
   });
 
   it('tóm tắt: số phòng và diện tích; hoặc lý do chưa tạo được', () => {
@@ -69,7 +70,7 @@ describe('hộp thoại Dự án mới', () => {
     const { d, els, value } = make();
     d.open();
     expect(els.dlgNew.hasAttribute('open')).toBe(true);
-    expect(['ngu', 'khach', 'bep', 'wc', 'lamviec', 'trong'].map(value)).toEqual(['1', '1', '1', '1', '0', '0']);
+    expect(['ngu', 'khach', 'bep', 'wc', 'lamviec', 'trong', 'banchong'].map(value)).toEqual(['1', '1', '1', '1', '0', '0', '0']);
     expect(els.npSummary.textContent).toContain('4 phòng');
     expect(els.npCreate.disabled).toBe(false);
     expect(els.npName.value).toBe('');
@@ -133,7 +134,7 @@ describe('hộp thoại Dự án mới', () => {
     els.npName.value = 'Nhà mới';
     els.npCreate.click();
     expect(els.dlgNew.hasAttribute('open')).toBe(false);
-    expect(deps.create).toHaveBeenCalledExactlyOnceWith({ counts: { ngu: 2, khach: 1, bep: 1, wc: 0, lamviec: 0, trong: 0 }, sample: true }, 'Nhà mới');
+    expect(deps.create).toHaveBeenCalledExactlyOnceWith({ counts: { ngu: 2, khach: 1, bep: 1, wc: 0, lamviec: 0, trong: 0, banchong: 0 }, sample: true }, 'Nhà mới');
   });
 
   it('mở lại thì về mặc định, không nhớ lần trước', () => {

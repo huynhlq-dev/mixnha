@@ -411,6 +411,26 @@ body.fs .editor {
  * Mô hình cả căn hộ (data-view="overview" trên .editor): các phòng xếp cạnh nhau, đủ đồ và cửa, sửa được ngay; bấm đúp một phòng thì zoom vào phòng đó.
  * Hai cột bên và thanh công cụ vẫn nằm yên chỗ (chỉ đổi nội dung) để khung vẽ giữ nguyên cỡ, nhờ đó hiệu ứng zoom liền mạch.
  */
+/* chú thích hành lang chỉ có nghĩa ở mô hình cả căn; ở đó thay cho hai chú thích của một phòng để hàng chú thích không dài thêm */
+.editor:not([data-view='overview']) .lg-apt,
+.editor[data-view='overview'] .lg-room {
+  display: none;
+}
+/* hành lang, khoảng trống kín giữa các phòng: tính vào diện tích trong nhà */
+.aptinterior rect {
+  fill: var(--hall);
+  pointer-events: none;
+}
+/* lớp bóng của phần phòng bị phòng khác che: đồ và cửa của phòng dưới nằm trên cùng, viền cam, để thấy và dời ra được */
+.aptghost .it > rect:first-child {
+  stroke: var(--warn) !important;
+  stroke-dasharray: 5 3 !important;
+  stroke-width: 2px !important;
+  fill-opacity: 0.6 !important;
+}
+.aptghost .op {
+  opacity: 0.7;
+}
 .aptbase {
   fill: var(--surface2);
   stroke: var(--line);

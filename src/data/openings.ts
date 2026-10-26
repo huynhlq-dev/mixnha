@@ -16,4 +16,6 @@ export const OPENING_PRESETS: readonly OpeningPreset[] = [
   { id: 'win120', kind: 'win', name: 'Cửa sổ', w: 120, sill: 90, h: 120, color: WINDOW_COLOR },
   { id: 'win180', kind: 'win', name: 'Cửa sổ lớn', w: 180, sill: 90, h: 120, color: WINDOW_COLOR },
   { id: 'win200', kind: 'win', name: 'Cửa kính sát sàn', w: 200, sill: 0, h: 210, color: WINDOW_COLOR },
+  { id: 'bal180', kind: 'win', name: 'Cửa kính ban công 2 cánh', w: 180, sill: 0, h: 210, color: WINDOW_COLOR },
+  { id: 'bal240', kind: 'win', name: 'Cửa kính ban công 4 cánh', w: 240, sill: 0, h: 210, color: WINDOW_COLOR },
 ];

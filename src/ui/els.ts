@@ -50,6 +50,7 @@ export function queryEls(root: ParentNode = document) {
     propsRoom: div('propsRoom'),
     roomSec: div('roomSec'),
     roomHead: div('roomHead'),
+    rails: div('rails'),
     wallsRow: div('wallsRow'),
     walls: div('walls'),
     mini: find(root, 'mini', SVGSVGElement),

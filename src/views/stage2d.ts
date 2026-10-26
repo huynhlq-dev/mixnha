@@ -20,7 +20,8 @@ const WHEEL_STEP = 0.0015;
 export const ZOOM_STEP = 1.4;
 
 type Drag =
-  | { kind: 'item'; sel: Selection; grab: Grab; moved: boolean }
+  /** over: phòng nằm trên cùng dưới con trỏ lần trước (mô hình cả căn), để chỉ chuyển đồ sang phòng khác khi con trỏ vừa đi vào phòng đó. */
+  | { kind: 'item'; sel: Selection; grab: Grab; moved: boolean; over: RoomId | null }
   | { kind: 'locked'; sel: Selection; x: number; y: number; told: boolean }
   | { kind: 'rot'; sel: Selection; moved: boolean }
   /** Kéo cửa đi hoặc cửa sổ. grab: con trỏ cách mép gần góc của cửa bao nhiêu cm dọc theo tường. */
@@ -165,7 +166,8 @@ export class Stage2D {
   /* ---------- Mô hình căn hộ: chọn phòng ---------- */
 
   private roomAt(e: Event): RoomId | null {
-    const id = (e.target as Element | null)?.closest?.('.aptroom')?.getAttribute('data-room');
+    // .aptghost: lớp bóng của phần phòng bị phòng khác che, vẫn là phòng của nó
+    const id = (e.target as Element | null)?.closest?.('.aptroom, .aptghost')?.getAttribute('data-room');
     return id && this.host.apartment().some((r) => r.id === id) ? id : null;
   }
 
@@ -375,7 +377,7 @@ export class Stage2D {
     }
     const p = this.toPoint(e);
     const grab = v.mode === 'elev' ? grabWall(it, p, this.host.geo().ceil) : grabPlan(it, p);
-    this.drag = { kind: 'item', sel, grab, moved: false };
+    this.drag = { kind: 'item', sel, grab, moved: false, over: v.overview ? roomAtPoint(this.host.aptRects(), this.toRaw(e), 0, this.host.aptStack()) : null };
   }
 
   private move(e: PointerEvent): void {
@@ -505,14 +507,17 @@ export class Stage2D {
   }
 
   /**
-   * Mô hình cả căn: kéo đồ qua sang một phòng khác thì chuyển đồ sang phòng đó (tâm đồ ở ngay con trỏ), rồi kéo tiếp theo phòng mới.
+   * Mô hình cả căn: kéo đồ vừa đi vào một phòng khác (phòng nằm trên cùng dưới con trỏ) thì chuyển đồ sang phòng đó (tâm đồ ở ngay con trỏ),
+   * rồi kéo tiếp theo phòng mới. Đồ bị phòng khác che (bóng cam) bắt đầu kéo ngay trong phòng che nó: chưa chuyển, chỉ khi ra rồi vào lại.
    * Trả về true nếu vừa chuyển phòng. Con trỏ ở hành lang (ngoài mọi phòng) thì đồ ở lại phòng cũ, kẹp trong phòng.
    */
   private crossRoom(d: Extract<Drag, { kind: 'item' }>, e: PointerEvent): boolean {
     const rects = this.host.aptRects();
     const raw = this.toRaw(e);
-    const to = roomAtPoint(rects, raw);
-    if (!to || to === this.host.geo().id) return false;
+    const to = roomAtPoint(rects, raw, 0, this.host.aptStack());
+    const was = d.over;
+    d.over = to;
+    if (!to || to === was || to === this.host.geo().id) return false;
     const r = rects[to];
     if (!r || !this.host.transferItem(d.sel, to, { x: raw.x - r.x, y: raw.y - r.y })) return false;
     this.origin = { x: r.x, y: r.y };

@@ -16,7 +16,7 @@ export interface ProjectSpec {
 }
 
 /** Số phòng mỗi loại lúc mở trình tạo dự án: căn hộ nhỏ đủ bốn phòng. */
-export const DEFAULT_COUNTS: Readonly<Record<RoomTypeId, number>> = { ngu: 1, khach: 1, bep: 1, wc: 1, lamviec: 0, trong: 0 };
+export const DEFAULT_COUNTS: Readonly<Record<RoomTypeId, number>> = { ngu: 1, khach: 1, bep: 1, wc: 1, lamviec: 0, trong: 0, banchong: 0 };
 
 /** Số phòng của một loại, đã làm tròn và kẹp về 0 trở lên (số lạ coi là 0). */
 export function countOf(counts: RoomCounts, type: RoomTypeId): number {

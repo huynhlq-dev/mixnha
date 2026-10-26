@@ -137,13 +137,45 @@ svg .op:focus-visible rect:first-of-type {
   background: var(--surface);
   border: 1px solid var(--line);
 }
-.status.bad {
-  border-color: var(--warn);
-  color: var(--warn);
+/* dòng trạng thái ba mức, nhìn màu và biểu tượng là hiểu: đạt (xanh, ✓), nên xem lại (vàng, !), lỗi (cam, ✕); info chỉ là hướng dẫn */
+.status::before {
+  content: 'i';
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--muted);
+  color: var(--surface);
 }
 .status.good {
   border-color: var(--ok);
-  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 9%, var(--surface));
+}
+.status.good::before {
+  content: '✓';
+  background: var(--ok);
+}
+.status.warn {
+  border-color: var(--caution);
+  background: color-mix(in srgb, var(--caution) 12%, var(--surface));
+}
+.status.warn::before {
+  content: '!';
+  background: var(--caution);
+  color: var(--surface);
+}
+.status.bad {
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface));
+}
+.status.bad::before {
+  content: '✕';
+  background: var(--warn);
+  color: var(--surface);
 }
 .legend {
   display: flex;
@@ -266,12 +298,9 @@ svg .op:focus-visible rect:first-of-type {
 }
 
 .foot {
-  margin-top: 28px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 13px;
-  max-width: 80ch;
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-start;
 }
 
 /*

@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fm } from '../src/core/format';
+import { TEMPLATES } from '../src/core/project';
 import { freshLayout } from '../src/core/layout';
 import { registry } from '../src/core/registry';
 import { roomGeo } from '../src/core/room';
@@ -26,7 +27,7 @@ import { renderPlan } from '../src/views/plan';
 afterEach(() => setLang('vi'));
 
 /** Chữ không cần dịch: tên thương hiệu, số, ký hiệu. */
-const NO_TRANSLATE = new Set(['Mix Nhà', '3D', '−', '+', '−90°', '+90°', '↺ 90°', '↻ 90°', '×', '›', '?', '/', '💡', '←↑↓→', 'Ctrl', 'Shift', 'Delete', 'Esc', 'C', 'D', 'R', 'V', 'Z']);
+const NO_TRANSLATE = new Set(['Mix Nhà', '3D', '−', '+', '−90°', '+90°', '↺ 90°', '↻ 90°', '×', '›', '?', '/', '💡', '←↑↓→', 'Ctrl', 'Shift', 'Delete', 'Esc', 'C', 'D', 'R', 'V', 'Z', 'cm', 'ⓘ']);
 
 const root = join(__dirname, '..');
 
@@ -78,6 +79,7 @@ function dataKeys(): Set<string> {
   }
   for (const list of [palettes.FLOOR_COLORS, palettes.WALL_COLORS, palettes.ITEM_COLORS]) for (const c of list) add(c.name);
   for (const n of Object.values(WALL_NAMES)) add(n);
+  for (const tpl of TEMPLATES) add(tpl.name);
   for (const v of [...Object.values(STATUS_LABEL), ...Object.values(PLACE_LABEL), UNKNOWN_GROUP.name]) add(v);
   return keys;
 }

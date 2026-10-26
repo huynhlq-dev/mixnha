@@ -101,7 +101,7 @@ describe('cảnh 3D khi trình duyệt không có WebGL', () => {
     const ok = describe3D(layout, R, registry, false);
     expect(ok.title).toBe('Phòng ngủ · 3D');
     expect(ok.size).toBe('400 × 350 × 270 cm');
-    expect(ok.status.tone).toBe('good');
+    expect(ok.status.tone).toBe('info');
     layout.items[0]!.x = 0;
     layout.items[0]!.y = 0;
     const bad = describe3D(layout, R, registry, false);

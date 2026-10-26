@@ -424,16 +424,16 @@ export function renderApartment(rooms: readonly AptRoom[], view: ApartmentView =
     status = { tone: 'bad', text: t('{n} chỗ đang chồng lấn, nằm ngoài phòng hoặc chắn cửa (viền cam), ở: {where}.', { n: nProblems, where }) };
   } else if (view.edit) {
     status = {
-      tone: 'good',
+      tone: 'info',
       text: t('Chỉnh bố cục: kéo phòng để dời, kéo tay nắm để đổi cỡ; phòng kéo sau nằm trên và khuyết phòng bị đè. {size}.', { size: sizeText }),
     };
   } else if (view.items) {
     status = {
-      tone: 'good',
+      tone: 'info',
       text: t('Kéo đồ vào phòng, bấm đồ để sửa, bấm đúp phòng để zoom vào. {size} · {n} món.', { size: sizeText, n: items }),
     };
   } else {
-    status = { tone: 'good', text: t('Bấm vào một phòng trên mô hình để phóng to và thiết kế. {size} · {n} món đồ.', { size: sizeText, n: items }) };
+    status = { tone: 'info', text: t('Bấm vào một phòng trên mô hình để phóng to và thiết kế. {size} · {n} món đồ.', { size: sizeText, n: items }) };
   }
   return {
     bounds,

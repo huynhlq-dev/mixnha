@@ -1,3 +1,4 @@
+import { TEMPLATES } from '../src/core/project';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LIMITS } from '../src/core/limits';
 import { newProjectRowsHtml, newProjectSummary, NewProjectDialog } from '../src/ui/newProject';
@@ -47,6 +48,8 @@ describe('hộp thoại Dự án mới', () => {
       dlgNew: dlg,
       npName: el<HTMLInputElement>('input', 'npName'),
       npList: el<HTMLElement>('ul', 'npList'),
+      npTpls: el<HTMLElement>('div', 'npTpls'),
+      npTitle: el<HTMLElement>('h2', 'npTitle'),
       npSample: Object.assign(el<HTMLInputElement>('input', 'npSample'), { type: 'checkbox' }),
       npSummary: el<HTMLElement>('div', 'npSummary'),
       npWarn: el<HTMLElement>('div', 'npWarn'),
@@ -157,5 +160,31 @@ describe('hộp thoại Dự án mới', () => {
     els.npCancel.click();
     expect(els.dlgNew.hasAttribute('open')).toBe(false);
     expect(deps.create).not.toHaveBeenCalled();
+  });
+
+  it('mẫu căn hộ: chọn mẫu thì đặt số phòng, kèm đồ mẫu, đánh dấu mẫu đang chọn; bấm +/− thì bỏ chọn mẫu', () => {
+    const { d, els, value, step } = make();
+    d.open();
+    expect(els.npTpls.querySelectorAll('[data-tpl]').length).toBe(TEMPLATES.length);
+    els.npTpls.querySelector<HTMLButtonElement>('[data-tpl="nhapho"]')!.click();
+    expect(['ngu', 'khach', 'bep', 'wc', 'lamviec', 'trong', 'banchong'].map(value)).toEqual(['3', '1', '1', '2', '1', '0', '1']);
+    expect(els.npSample.checked).toBe(true);
+    expect(els.npSummary.textContent).toContain('9 phòng');
+    expect(els.npTpls.querySelector('[data-tpl="nhapho"]')!.getAttribute('aria-pressed')).toBe('true');
+    expect(els.npTpls.querySelectorAll('[aria-pressed="true"]').length).toBe(1);
+    step('ngu', -1);
+    expect(els.npTpls.querySelectorAll('[aria-pressed="true"]').length).toBe(0);
+    // mở lại: về mặc định, không mẫu nào được chọn
+    d.open();
+    expect(['ngu', 'khach', 'bep', 'wc'].map(value)).toEqual(['1', '1', '1', '1']);
+    expect(els.npTpls.querySelectorAll('[aria-pressed="true"]').length).toBe(0);
+  });
+
+  it('lần mở đầu tiên là màn chào; mở lại thì là Dự án mới', () => {
+    const { d, els } = make();
+    d.open(true);
+    expect(els.npTitle.textContent).toBe('Chào mừng đến Mix Nhà');
+    d.open();
+    expect(els.npTitle.textContent).toBe('Dự án mới');
   });
 });

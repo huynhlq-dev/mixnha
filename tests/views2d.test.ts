@@ -90,7 +90,7 @@ describe('mặt bằng', () => {
     dress.y = 100;
     dress.rot = 0;
     const f = plan(layout, R);
-    expect(f.status.tone).toBe('bad');
+    expect(f.status.tone).toBe('warn');
     expect(f.status.text).toContain('Lối đi giữa Giường đôi và Bàn trang điểm chỉ rộng 40 cm. Nên chừa từ 60 cm.');
     expect(f.svg).toContain('fill:var(--warn)');
     expect(f.svg).toContain('>40<');

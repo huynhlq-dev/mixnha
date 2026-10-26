@@ -228,3 +228,48 @@ details.help > .hint {
     min-width: 0;
   }
 }
+
+/* header: "Dự án mới" là nút chính, Xuất / Nhập là nhóm phụ, giao diện và ngôn ngữ là tiện ích nhẹ */
+.topbtns .btn.util,
+.btn.util {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  font-weight: 500;
+}
+.topbtns .btn.util:hover,
+.btn.util:hover {
+  background: var(--surface2);
+  color: var(--ink);
+}
+.topbtns .lang.util {
+  margin-left: 2px;
+}
+.topbtns .lang.util .btn {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--muted);
+  font-weight: 600;
+}
+.topbtns .lang.util .btn[aria-pressed='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+
+/* menu thông tin ở chân trang mở lên phía trên */
+.menu.up {
+  top: auto;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: auto;
+}
+.menu.info {
+  width: min(420px, calc(100vw - 32px));
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.menu.info p {
+  margin: 0;
+}

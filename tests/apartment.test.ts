@@ -113,7 +113,7 @@ describe('vẽ mô hình căn hộ', () => {
     expect(f.title).toBe('Cả căn hộ');
     expect(f.size).toBe('4 phòng');
     expect(f.area).toContain('m²');
-    expect(f.status.tone).toBe('good');
+    expect(f.status.tone).toBe('info');
     expect(f.status.text).toContain('Bấm vào một phòng');
     expect(f.status.text).toContain(`${Math.round(total * 10) / 10}`.replace('.', ','));
     expect(f.area).toBe(`${(Math.round(total * 10) / 10).toString().replace('.', ',')} m²`);
@@ -666,7 +666,7 @@ describe('mô hình vẽ đủ đồ và cửa (sửa được ngay)', () => {
 
   it('trạng thái khi ổn: hướng dẫn kéo đồ thả vào phòng', () => {
     const f = renderApartment(rooms(), { items: full() });
-    expect(f.status.tone).toBe('good');
+    expect(f.status.tone).toBe('info');
     expect(f.status.text).toContain('Kéo đồ vào phòng');
     expect(f.status.text).toContain('4 phòng');
     expect(f.status.text).toContain('hành lang');
@@ -705,7 +705,7 @@ describe('dòng thông tin 3D cả căn hộ', () => {
     expect(info.title).toBe('Cả căn hộ · 3D');
     expect(info.size).toBe('4 phòng');
     expect(info.area).toBe('48,4 m²');
-    expect(info.status.tone).toBe('good');
+    expect(info.status.tone).toBe('info');
     expect(info.status.text).toContain('chỉ để xem');
   });
 

@@ -70,6 +70,8 @@ import { bindPen, colorAt, paintAt, penShown, rememberColor, updatePenUi, type P
 import { bindProps, paintRotation, updateProps, type OpeningModel, type PropsApp, type SelModel } from './props';
 import { remindMessage } from './remind';
 import { bindSwatches, swatchesHtml, type SwatchApp, type SwatchKey } from './swatches';
+import { designHealth } from '../core/health';
+import { apartmentHealthHtml, healthHtml } from './health';
 import { bindMenu } from './menu';
 import { Tips } from './tips';
 import { Toast } from './toast';
@@ -227,6 +229,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     this.tips = new Tips(els, this.kv);
     bindMenu(els.btnMore, els.moreMenu);
     bindMenu(els.btnHelp, els.helpMenu);
+    bindMenu(els.btnInfo, els.infoMenu);
     bindProps(els, this);
     bindPen(els, this);
     bindSwatches([els.floorSw, els.wallSw, els.itemSw, els.penRecent], this);
@@ -1402,8 +1405,8 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     const s = this.scene;
     s?.show();
     const info = this.v.overview ? describeApartment3D(this.apartment(), !!s?.failed, this.interior()) : describe3D(this.layout(), this.geo(), this.registry, !!s?.failed);
-    if (!s && !this.sceneFailed) info.status = { tone: 'good', text: t('Đang tải khung 3D...') };
-    else if (!s) info.status = { tone: 'good', text: t('Không tải được phần 3D. Hãy kiểm tra kết nối mạng rồi tải lại trang. Mặt bằng và mặt đứng vẫn dùng bình thường.') };
+    if (!s && !this.sceneFailed) info.status = { tone: 'info', text: t('Đang tải khung 3D...') };
+    else if (!s) info.status = { tone: 'warn', text: t('Không tải được phần 3D. Hãy kiểm tra kết nối mạng rồi tải lại trang. Mặt bằng và mặt đứng vẫn dùng bình thường.') };
     this.showInfo(info);
   }
 
@@ -1451,6 +1454,8 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     els.roomArea.textContent = f.area;
     els.status.className = `status ${f.status.tone}`;
     els.status.textContent = f.status.text;
+    // một phòng: khung kiểm tra đổi cùng dòng trạng thái, kể cả lúc đang kéo (cả căn hộ thì cập nhật khi thả, ở updatePanels)
+    if (!this.v.overview) this.updateHealth();
   }
 
   /** Vẽ lại cả bảng thuộc tính, ghi một bước Hoàn tác (nếu bản vẽ đã khác) và lưu. continuous: thao tác liên tục, gộp bước nếu liền nhau. */
@@ -1523,6 +1528,16 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     this.updateGuides();
   }
 
+  /** Khung "Kiểm tra thiết kế": một phòng thì ba mục có màu, cả căn hộ thì mỗi phòng một dòng. Không hiện ở 3D cả căn (chỉ để xem). */
+  private updateHealth(): void {
+    const { els, v } = this;
+    els.healthBox.hidden = v.overview && v.mode === '3d';
+    if (els.healthBox.hidden) return;
+    els.healthBox.innerHTML = v.overview
+      ? apartmentHealthHtml(this.apartment().map((r) => ({ name: r.name, checks: designHealth(r.layout, r.geo, this.registry) })))
+      : healthHtml(designHealth(this.layout(), this.geo(), this.registry));
+  }
+
   /** Màn hình trống (chưa có món nào trong phạm vi đang xem): hiện thẻ hướng dẫn ba bước; và gợi ý nhanh hợp với màn hình, mỗi gợi ý một lần. */
   private updateGuides(): void {
     const { els, v } = this;
@@ -1530,6 +1545,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     const items = v.overview ? this.rooms.reduce((n, r) => n + countItems(this.layouts[r.id]!), 0) : countItems(this.layout());
     els.emptyState.hidden = items > 0 || is3d;
     els.emptyTitle.textContent = v.overview ? t('Căn hộ chưa có đồ nội thất') : t('Phòng này chưa có đồ nội thất');
+    this.updateHealth();
     this.tips.update({ overview: v.overview, mode: v.mode, hasItems: items > 0, blocked: !!document.querySelector('dialog[open]') });
   }
 

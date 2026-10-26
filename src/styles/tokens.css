@@ -11,6 +11,8 @@
   --accent-ink: #ffffff;
   --accent-soft: #dce6ff;
   --warn: #c2410c;
+  /* nên xem lại (vàng): giữa đạt (--ok) và lỗi (--warn) */
+  --caution: #a16207;
   --ok: #0f7a4b;
   --grid: #dde4e1;
   /* nền hành lang, khoảng trống kín giữa các phòng (tính vào diện tích trong nhà) */
@@ -30,6 +32,7 @@
   --accent-ink: #0b1220;
   --accent-soft: #1d2d55;
   --warn: #fb923c;
+  --caution: #facc15;
   --ok: #4ade80;
   --grid: #26332f;
   --hall: #2b3a30;

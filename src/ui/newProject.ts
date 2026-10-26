@@ -1,4 +1,4 @@
-import { DEFAULT_COUNTS, countOf, countsError, totalArea, totalRooms, type ProjectSpec } from '../core/project';
+import { DEFAULT_COUNTS, TEMPLATES, countOf, countsError, totalArea, totalRooms, type ProjectSpec } from '../core/project';
 import { escapeHtml, fm } from '../core/format';
 import { LIMITS } from '../core/limits';
 import { ROOM_TYPE_IDS, ROOMS, type RoomTypeId } from '../data/rooms';
@@ -23,6 +23,14 @@ export function newProjectRowsHtml(counts: Counts): string {
   }).join('');
 }
 
+/** Các mẫu căn hộ chọn nhanh: tên, số phòng và diện tích; mẫu đang chọn có aria-pressed. */
+export function templatesHtml(selected: string | null): string {
+  return TEMPLATES.map((tpl) => {
+    const area = totalArea(tpl.counts);
+    return `<button class="tpl" type="button" data-tpl="${tpl.id}" aria-pressed="${tpl.id === selected}"><b>${escapeHtml(tn(tpl.name))}</b><span>${escapeHtml(t('{n} phòng', { n: totalRooms(tpl.counts) }))} · ${fm(area)} m²</span></button>`;
+  }).join('');
+}
+
 /** "4 phòng · 48,4 m²", hoặc lý do chưa tạo được. */
 export function newProjectSummary(counts: Counts): { text: string; error: boolean } {
   const err = countsError(counts);
@@ -38,13 +46,15 @@ export interface NewProjectDeps {
   exportFirst: () => void;
 }
 
-type NewEls = Pick<Els, 'dlgNew' | 'npName' | 'npList' | 'npSample' | 'npSummary' | 'npWarn' | 'npExport' | 'npCreate' | 'npCancel'>;
+type NewEls = Pick<Els, 'npTitle' | 'npTpls' | 'dlgNew' | 'npName' | 'npList' | 'npSample' | 'npSummary' | 'npWarn' | 'npExport' | 'npCreate' | 'npCancel'>;
 
 /** Hộp thoại Dự án mới: chọn số phòng mỗi loại, đặt tên, có kèm đồ mẫu hay không. */
 export class NewProjectDialog {
   private counts: Counts = { ...DEFAULT_COUNTS };
   /** Lần mở đầu tiên (nút Hủy ghi là "Dùng căn hộ mẫu"). */
   private first = false;
+  /** Mẫu căn hộ đang chọn (null: tự chọn số phòng). */
+  private tpl: string | null = null;
 
   constructor(
     private readonly els: NewEls,
@@ -57,6 +67,7 @@ export class NewProjectDialog {
       const next = countOf(this.counts, type) + Number(b.dataset.step);
       if (next < 0 || (Number(b.dataset.step) > 0 && totalRooms(this.counts) >= LIMITS.maxRooms)) return;
       this.counts[type] = next;
+      this.tpl = null;
       this.paint();
       // vẽ lại danh sách làm mất focus: trả lại cho nút vừa bấm
       els.npList.querySelector<HTMLElement>(`[data-type="${type}"] [data-step="${b.dataset.step}"]:not([disabled])`)?.focus();
@@ -65,6 +76,16 @@ export class NewProjectDialog {
       if (countsError(this.counts)) return;
       els.dlgNew.close();
       deps.create({ counts: { ...this.counts }, sample: els.npSample.checked }, els.npName.value);
+    });
+    els.npTpls.addEventListener('click', (e) => {
+      const id = (e.target as Element).closest<HTMLElement>('[data-tpl]')?.dataset.tpl;
+      const tpl = TEMPLATES.find((x) => x.id === id);
+      if (!tpl) return;
+      this.tpl = tpl.id;
+      this.counts = Object.fromEntries(ROOM_TYPE_IDS.map((ty) => [ty, countOf(tpl.counts, ty)])) as Counts;
+      // chọn mẫu thì kèm đồ mẫu cho phòng có sẵn bố trí để xem ngay
+      els.npSample.checked = true;
+      this.paint();
     });
     els.npCancel.addEventListener('click', () => els.dlgNew.close());
     els.npExport.addEventListener('click', () => {
@@ -77,6 +98,7 @@ export class NewProjectDialog {
   open(first = false): void {
     const { els, deps } = this;
     this.first = first;
+    this.tpl = null;
     this.counts = { ...DEFAULT_COUNTS };
     els.npName.value = '';
     els.npSample.checked = false;
@@ -94,11 +116,14 @@ export class NewProjectDialog {
 
   private paintCancel(): void {
     this.els.npCancel.textContent = this.first ? t('Dùng căn hộ mẫu') : t('Hủy');
+    // lần mở đầu tiên là màn chào
+    this.els.npTitle.textContent = this.first ? t('Chào mừng đến Mix Nhà') : t('Dự án mới');
   }
 
   private paint(): void {
     const { els } = this;
     els.npList.innerHTML = newProjectRowsHtml(this.counts);
+    els.npTpls.innerHTML = templatesHtml(this.tpl);
     const s = newProjectSummary(this.counts);
     els.npSummary.textContent = s.text;
     els.npSummary.classList.toggle('errline', s.error);

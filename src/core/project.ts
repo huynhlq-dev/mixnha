@@ -19,6 +19,21 @@ export interface ProjectSpec {
 /** Số phòng mỗi loại lúc mở trình tạo dự án: căn hộ nhỏ đủ bốn phòng. */
 export const DEFAULT_COUNTS: Readonly<Record<RoomTypeId, number>> = { ngu: 1, khach: 1, bep: 1, wc: 1, lamviec: 0, trong: 0, banchong: 0 };
 
+/** Mẫu căn hộ chọn nhanh trong hộp thoại Dự án mới: tên (khóa dịch) và số phòng mỗi loại. Chọn mẫu thì dự án kèm đồ mẫu. */
+export interface Template {
+  id: string;
+  name: string;
+  counts: RoomCounts;
+}
+
+export const TEMPLATES: readonly Template[] = [
+  { id: 'studio', name: 'Studio', counts: { ngu: 1, bep: 1, wc: 1 } },
+  { id: 'pn1', name: '1 phòng ngủ', counts: { ngu: 1, khach: 1, bep: 1, wc: 1 } },
+  { id: 'pn2', name: '2 phòng ngủ', counts: { ngu: 2, khach: 1, bep: 1, wc: 1, banchong: 1 } },
+  { id: 'nhapho', name: 'Nhà phố', counts: { ngu: 3, khach: 1, bep: 1, wc: 2, lamviec: 1, banchong: 1 } },
+  { id: 'vanphong', name: 'Phòng làm việc', counts: { lamviec: 2, khach: 1, wc: 1 } },
+];
+
 /** Số phòng của một loại, đã làm tròn và kẹp về 0 trở lên (số lạ coi là 0). */
 export function countOf(counts: RoomCounts, type: RoomTypeId): number {
   const n = counts[type];

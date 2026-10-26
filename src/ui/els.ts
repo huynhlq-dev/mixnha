@@ -18,6 +18,9 @@ export function queryEls(root: ParentNode = document) {
     btnTheme: btn('btnTheme'),
     langBox: div('langBox'),
     npLang: div('npLang'),
+    btnInfo: btn('btnInfo'),
+    infoMenu: div('infoMenu'),
+    healthBox: find(root, 'healthBox', HTMLDetailsElement),
 
     remind: div('remind'),
     remindText: div('remindText'),
@@ -151,6 +154,8 @@ export function queryEls(root: ParentNode = document) {
     dlgNew: find(root, 'dlgNew', HTMLDialogElement),
     npName: inp('npName'),
     npList: div('npList'),
+    npTpls: div('npTpls'),
+    npTitle: div('npTitle'),
     npSample: inp('npSample'),
     npSummary: div('npSummary'),
     npWarn: div('npWarn'),

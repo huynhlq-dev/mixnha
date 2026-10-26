@@ -265,7 +265,7 @@ export function renderPlan(i: PlanInput): Frame {
     tone = 'bad';
     text = t('{n} món đang chồng lấn, nằm ngoài phòng hoặc chắn vùng mở cửa (nét đứt).', { n: nbad });
   } else if (info.gap && info.gap.dist < MIN_LANE) {
-    tone = 'bad';
+    tone = 'warn';
     text = t('Lối đi giữa {a} và {b} chỉ rộng {dist} cm. Nên chừa từ {min} cm.', { a: tn(info.gap.a), b: tn(info.gap.b), dist: fm(info.gap.dist), min: MIN_LANE });
   } else if (info.gap) {
     text = t('Không chồng lấn. Lối đi hẹp nhất là {dist} cm, giữa {a} và {b}.', { dist: fm(info.gap.dist), a: tn(info.gap.a), b: tn(info.gap.b) });

@@ -23,6 +23,8 @@ export interface LaneGap {
 export interface PlanAnalysis {
   /** Món đang chồng lấn, nằm ngoài phòng hoặc chắn vùng mở cửa. */
   bad: Set<number>;
+  /** Trong số đó, món chắn vùng mở cửa (kể cả khi không chồng món nào). */
+  blocking: Set<number>;
   gap: LaneGap | null;
   /** Phần trăm diện tích sàn bị đồ chiếm. */
   pct: number;
@@ -33,6 +35,7 @@ export const MIN_LANE = 60;
 
 export function analysePlan(layout: Layout, R: RoomGeo, reg: Registry): PlanAnalysis {
   const bad = new Set<number>();
+  const blocking = new Set<number>();
   let used = 0;
   const zones = R.doors.map((d) => polyOfRect(doorGeom(R, d).zone));
   const list = layout.items.filter((i) => i.z > 0);
@@ -42,7 +45,10 @@ export function analysePlan(layout: Layout, R: RoomGeo, reg: Registry): PlanAnal
     const pa = polyOf(it);
     used += it.w * it.d;
     let isBad = b.x0 < -0.5 || b.y0 < -0.5 || b.x1 > R.W + 0.5 || b.y1 > R.H + 0.5;
-    if (!isBad) isBad = zones.some((z) => satHit(pa, z));
+    if (zones.some((z) => satHit(pa, z))) {
+      blocking.add(it.uid);
+      isBad = true;
+    }
     if (!isBad) isBad = list.some((o) => o !== it && satHit(pa, polyOf(o)));
     if (isBad) bad.add(it.uid);
   }
@@ -77,7 +83,7 @@ export function analysePlan(layout: Layout, R: RoomGeo, reg: Registry): PlanAnal
       for (const c of cands) if (!gap || c.dist < gap.dist) gap = c;
     }
   }
-  return { bad, gap, pct: Math.round((used / (R.W * R.H)) * 100) };
+  return { bad, blocking, gap, pct: Math.round((used / (R.W * R.H)) * 100) };
 }
 
 export interface WallAnalysis {

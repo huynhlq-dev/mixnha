@@ -2,14 +2,16 @@ import { escapeHtml } from '../core/format';
 import type { RoomEntry, RoomId } from '../data/rooms';
 import type { WallKey } from '../data/schema';
 import { WALL_KEYS, WALL_NAMES } from '../data/walls';
-import { tn } from '../i18n';
+import { t, tn } from '../i18n';
 
 /**
  * Các tab chọn phòng: mỗi phòng của căn hộ một tab, theo thứ tự trong danh sách.
  * overview: đang xem mô hình cả căn hộ thì chưa có phòng nào được chọn.
  */
 export function roomTabsHtml(rooms: readonly RoomEntry[], current: RoomId, overview = false): string {
-  return rooms.map((r) => `<button class="tab" type="button" data-room="${escapeHtml(r.id)}" aria-pressed="${!overview && r.id === current}">${escapeHtml(tn(r.name))}</button>`).join('');
+  // tab đầu là cả căn hộ: luôn thấy mình đang ở đâu (cả căn hay một phòng) và về cả căn bằng một lần bấm
+  const all = `<button class="tab tab-all" type="button" data-apt="1" aria-pressed="${overview}">${escapeHtml(t('Cả căn hộ'))}</button>`;
+  return all + rooms.map((r) => `<button class="tab" type="button" data-room="${escapeHtml(r.id)}" aria-pressed="${!overview && r.id === current}">${escapeHtml(tn(r.name))}</button>`).join('');
 }
 
 /** Các tab chọn tường ở kiểu xem mặt đứng. */

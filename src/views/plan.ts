@@ -209,8 +209,11 @@ export function renderPlan(i: PlanInput): Frame {
     const tc = textOn(it.color);
     const short = reg.resolve(it.id)?.short;
     const lock = it.locked ? lockGlyph(-it.w / 2 + 9, -it.d / 2 + 9, it.rot) : '';
+    // món đang chọn có thêm vòng viền màu chính bao ngoài và bóng nhẹ: vẫn thấy được khi viền món đã đổi sang màu cảnh báo
+    const ring = selected ? `<rect class="selring" x="${-it.w / 2 - 5}" y="${-it.d / 2 - 5}" width="${it.w + 10}" height="${it.d + 10}" rx="7" style="fill:none;stroke:${ACCENT};stroke-width:2.5"/>` : '';
     o.push(
-      `<g class="it" data-uid="${it.uid}" tabindex="0" role="button" aria-label="${escapeHtml(t('{name}, {w} x {d} cm', { name: tn(it.name), w: fm(it.w), d: fm(it.d) }))}${it.locked ? escapeHtml(t(', đã khóa')) : ''}" transform="translate(${n2(it.x)} ${n2(it.y)}) rotate(${n2(it.rot)})" style="cursor:${it.locked ? 'pointer' : 'move'}">` +
+      `<g class="it"${selected ? ' data-sel="true"' : ''} data-uid="${it.uid}" tabindex="0" role="button" aria-label="${escapeHtml(t('{name}, {w} x {d} cm', { name: tn(it.name), w: fm(it.w), d: fm(it.d) }))}${it.locked ? escapeHtml(t(', đã khóa')) : ''}" transform="translate(${n2(it.x)} ${n2(it.y)}) rotate(${n2(it.rot)})" style="cursor:${it.locked ? 'pointer' : 'move'}">` +
+        ring +
         `<rect x="${-it.w / 2}" y="${-it.d / 2}" width="${it.w}" height="${it.d}" rx="3" style="fill:${it.color};fill-opacity:${it.z === 0 ? 0.8 : 1};stroke:${stroke};stroke-width:${sw}"${it.z === 0 ? ' stroke-dasharray="6 4"' : ''}/>` +
         `<g transform="rotate(${n2(-it.rot)})">${itemLabel(it, box, short, dim, tc)}</g>${lock}</g>`,
     );

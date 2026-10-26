@@ -45,20 +45,29 @@
         <div class="bar">
           <div class="tabs" id="rooms" role="group" aria-label="Chọn khu vực"></div>
           <div class="acts">
-            <button class="btn" id="btnUndo" type="button" disabled title="Hoàn tác (Ctrl+Z)"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3L2.5 6.5L6 10M3 6.5H10a4 4 0 0 1 0 8H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>Hoàn tác</button>
-            <button class="btn" id="btnRedo" type="button" disabled title="Làm lại (Ctrl+Shift+Z)"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L13.5 6.5L10 10M13 6.5H6a4 4 0 0 0 0 8h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>Làm lại</button>
-            <button class="btn" id="btnSnap" aria-pressed="true" type="button" title="Món nhảy theo lưới 5 cm khi kéo">Bám lưới</button>
-            <button class="btn" id="btnDim" aria-pressed="true" type="button">Hiện kích thước</button>
-            <button class="btn switch" id="btnDetail" type="button" role="switch" aria-checked="false" title="Khi chọn một món, hiện kích thước rộng, sâu, cao ngay trên từng cạnh của món (nhãn hơi mờ). Không dùng được ở 3D."><span class="track" aria-hidden="true"><span class="thumb"></span></span>Kích thước chi tiết</button>
-            <button class="btn" id="btnReset" type="button">Bố trí mẫu</button>
-            <button class="btn" id="btnClear" type="button">Xóa hết</button>
+            <div class="actgrp" role="group" aria-label="Hoàn tác và làm lại">
+              <button class="btn" id="btnUndo" type="button" disabled title="Hoàn tác (Ctrl+Z)"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3L2.5 6.5L6 10M3 6.5H10a4 4 0 0 1 0 8H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>Hoàn tác</button>
+              <button class="btn" id="btnRedo" type="button" disabled title="Làm lại (Ctrl+Shift+Z)"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L13.5 6.5L10 10M13 6.5H6a4 4 0 0 0 0 8h3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>Làm lại</button>
+            </div>
+            <div class="actgrp" role="group" aria-label="Hiển thị">
+              <button class="btn" id="btnSnap" aria-pressed="true" type="button" title="Món nhảy theo lưới 5 cm khi kéo">Bám lưới</button>
+              <button class="btn" id="btnDim" aria-pressed="true" type="button">Hiện kích thước</button>
+              <button class="btn switch" id="btnDetail" type="button" role="switch" aria-checked="false" title="Khi chọn một món, hiện kích thước rộng, sâu, cao ngay trên từng cạnh của món (nhãn hơi mờ). Không dùng được ở 3D."><span class="track" aria-hidden="true"><span class="thumb"></span></span>Kích thước chi tiết</button>
+            </div>
+            <div class="more">
+              <button class="btn" id="btnMore" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="moreMenu" title="Bố trí mẫu, xóa hết"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3" cy="8" r="1.4" fill="currentColor" /><circle cx="8" cy="8" r="1.4" fill="currentColor" /><circle cx="13" cy="8" r="1.4" fill="currentColor" /></svg>Khác</button>
+              <div class="menu" id="moreMenu" role="menu" aria-label="Thao tác khác" hidden>
+                <button class="btn" role="menuitem" id="btnReset" type="button">Bố trí mẫu</button>
+                <button class="btn danger" role="menuitem" id="btnClear" type="button">Xóa hết</button>
+              </div>
+            </div>
           </div>
         </div>
         <div class="bar bar2">
-          <div class="tabs" id="modes" role="group" aria-label="Kiểu xem">
-            <button class="tab" type="button" data-mode="plan" aria-pressed="true">Mặt bằng<span class="lg"> (nhìn từ trên)</span></button>
-            <button class="tab" type="button" data-mode="elev" aria-pressed="false">Mặt đứng<span class="lg"> (nhìn vào tường)</span></button>
-            <button class="tab" type="button" data-mode="3d" aria-pressed="false">3D<span class="lg"> (xoay 360°)</span></button>
+          <div class="tabs seg" id="modes" role="group" aria-label="Kiểu xem">
+            <button class="tab" type="button" data-mode="plan" aria-pressed="true"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5" /><path d="M2 8h6V2" fill="none" stroke="currentColor" stroke-width="1.5" /></svg>Mặt bằng<span class="lg"> (nhìn từ trên)</span></button>
+            <button class="tab" type="button" data-mode="elev" aria-pressed="false"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 14h12M3 14V3h10v11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" /><rect x="5.5" y="6" width="5" height="4" fill="none" stroke="currentColor" stroke-width="1.3" /></svg>Mặt đứng<span class="lg"> (nhìn vào tường)</span></button>
+            <button class="tab" type="button" data-mode="3d" aria-pressed="false"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8l5.5 3.1v6.2L8 14.2l-5.5-3.1V4.9z M2.5 4.9L8 8l5.5-3.1M8 8v6.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" /></svg>3D<span class="lg"> (xoay 360°)</span></button>
           </div>
           <div class="aptacts">
             <button class="btn switch" id="btnAptEdit" type="button" role="switch" aria-checked="false" hidden title="Bật để kéo phòng sang chỗ khác và kéo tay nắm đổi kích thước phòng ngay trên mô hình căn hộ. Tắt thì kéo là dời đồ trong phòng."><span class="track" aria-hidden="true"><span class="thumb"></span></span>Chỉnh bố cục</button>
@@ -84,8 +93,26 @@
           <div class="stage">
             <div class="stagehead">
               <button class="btn" id="btnApt" type="button" title="Về mô hình cả căn hộ (zoom ra), rồi chọn phòng khác"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3L5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" /></svg>Cả căn hộ</button>
+              <span class="crumbsep" aria-hidden="true">›</span>
               <strong id="roomName"></strong><span class="mono" id="roomSize"></span><span class="mono" id="roomArea"></span>
               <div class="stageacts">
+                <div class="more">
+                  <button class="btn" id="btnHelp" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="helpMenu" title="Phím tắt và mẹo thao tác"><span aria-hidden="true">?</span> Phím tắt</button>
+                  <div class="menu help" id="helpMenu" role="region" aria-label="Phím tắt" hidden>
+                    <dl class="keys">
+                      <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd></dt><dd>Hoàn tác</dd>
+                      <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd></dt><dd>Làm lại</dd>
+                      <dt><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>Ctrl</kbd>+<kbd>V</kbd></dt><dd>Sao chép, dán món đang chọn</dd>
+                      <dt><kbd>Ctrl</kbd>+<kbd>D</kbd></dt><dd>Nhân đôi món đang chọn</dd>
+                      <dt><kbd>R</kbd></dt><dd>Xoay 90° (Shift: ngược lại)</dd>
+                      <dt>←↑↓→</dt><dd>Dịch 5 cm (giữ Shift: 25 cm)</dd>
+                      <dt><kbd>Delete</kbd></dt><dd>Xóa món, cửa hoặc phòng đang chọn</dd>
+                      <dt><kbd>Esc</kbd></dt><dd>Bỏ chọn, thoát toàn màn hình</dd>
+                      <dt>Bấm đúp</dt><dd>Zoom vào một phòng</dd>
+                      <dt><kbd>Ctrl</kbd> + cuộn</dt><dd>Phóng to, thu nhỏ bản vẽ</dd>
+                    </dl>
+                  </div>
+                </div>
                 <div class="zoombar" id="zoombar" role="group" aria-label="Phóng to bản vẽ">
                   <button class="btn" id="zOut" type="button" aria-label="Thu nhỏ" title="Thu nhỏ">−</button>
                   <button class="btn" id="zFit" type="button" title="Xem toàn bộ bản vẽ">Vừa khung</button>
@@ -95,6 +122,23 @@
               </div>
             </div>
             <div class="canvaswrap">
+              <div class="tip" id="tip" role="status" hidden>
+                <span aria-hidden="true">💡</span>
+                <span id="tipText"></span>
+                <button class="tipx" id="tipClose" type="button" aria-label="Đóng gợi ý" title="Đóng gợi ý">×</button>
+              </div>
+              <div class="emptycard" id="emptyState" hidden>
+                <strong id="emptyTitle"></strong>
+                <ol class="steps">
+                  <li>Chọn một nhóm trong thư viện</li>
+                  <li>Kéo món thả vào phòng</li>
+                  <li>Xem 3D để kiểm tra</li>
+                </ol>
+                <div class="row">
+                  <button class="btn pri" id="emptyAdd" type="button">Thêm đồ từ thư viện</button>
+                  <button class="btn" id="emptyNew" type="button">Dự án mới, có đồ mẫu</button>
+                </div>
+              </div>
               <svg id="plan" role="img" aria-label="Mặt bằng phòng 2D"></svg>
               <div id="view3d" class="view3d" hidden tabindex="0" role="application" aria-label="Xem 3D căn phòng. Kéo để xoay 360 độ, cuộn để phóng to, phím mũi tên để xoay">
                 <div class="v3bar">
@@ -141,7 +185,7 @@
                     <button class="btn" id="opFlip" type="button" title="Đổi bản lề sang đầu bên kia của cửa">Đổi bên bản lề</button>
                     <button class="btn" id="opSwing" type="button" aria-pressed="false" title="Mở cánh ra ngoài phòng thay vì vào trong">Mở ra ngoài</button>
                   </div>
-                  <p class="hint" style="margin: 2px 0 0">Phím R xoay hướng mở cánh một nấc theo chiều kim đồng hồ, Shift+R ngược lại.</p>
+                  <details class="help"><summary>Mẹo</summary><p class="hint">Phím R xoay hướng mở cánh một nấc theo chiều kim đồng hồ, Shift+R ngược lại.</p></details>
                 </div>
                 <div class="field">
                   <span>Thao tác</span>
@@ -149,7 +193,7 @@
                     <button class="btn danger" id="opDel" type="button" title="Xóa cửa này khỏi tường (Delete). Có thể Hoàn tác.">Xóa</button>
                   </div>
                 </div>
-                <p class="hint">Kéo cửa trên bản vẽ để dời chỗ. Trên mặt bằng, kéo cửa sang tường khác thì cửa chuyển tường. Phím tắt: mũi tên dịch 5 cm (giữ Shift: 25 cm), Delete xóa. Thêm cửa mới từ nhóm Cửa đi, Cửa sổ trong thư viện.</p>
+                <details class="help"><summary>Mẹo</summary><p class="hint">Kéo cửa trên bản vẽ để dời chỗ. Trên mặt bằng, kéo cửa sang tường khác thì cửa chuyển tường. Phím tắt: mũi tên dịch 5 cm (giữ Shift: 25 cm), Delete xóa. Thêm cửa mới từ nhóm Cửa đi, Cửa sổ trong thư viện.</p></details>
               </div>
               <div id="selBox" hidden>
                 <div class="selname"><span id="selName"></span><span class="badge" id="selCustom" hidden title="Món không có trong thư viện, giữ theo kích thước ghi trong file">tùy chỉnh</span></div>
@@ -174,7 +218,7 @@
                     <button class="knob" id="rotKnob" type="button" aria-label="Xoay tự do: nhấn giữ rồi kéo quanh vòng tròn" title="Xoay tự do: nhấn giữ rồi kéo. Giữ Shift để nhảy 15°"><span class="knob-dial" id="knobDial"></span></button>
                     <input class="num rotnum" id="selRot" type="number" min="0" max="359" step="1" inputmode="decimal" aria-label="Góc xoay (độ)" />
                   </div>
-                  <p class="hint" style="margin: 0">Nhấn giữ vòng tròn rồi kéo để xoay tự do, hoặc kéo chấm xanh trên món. Giữ Shift để nhảy 15°.</p>
+                  <details class="help"><summary>Mẹo</summary><p class="hint">Nhấn giữ vòng tròn rồi kéo để xoay tự do, hoặc kéo chấm xanh trên món. Giữ Shift để nhảy 15°.</p></details>
                 </div>
                 <div class="field">
                   <span>Thao tác</span>
@@ -184,7 +228,6 @@
                     <button class="btn danger" id="btnDel" type="button">Xóa</button>
                   </div>
                   <p class="hint" id="lockHint" style="margin: 2px 0 0" hidden>Món đã khóa nên không kéo, xoay, đổi kích thước hay xóa được. Vẫn đổi màu. Bấm Khóa món lần nữa để mở khóa.</p>
-                  <p class="hint" style="margin: 2px 0 0">Phím tắt: mũi tên di chuyển 5 cm (giữ Shift: 25 cm), R xoay 90°, Delete xóa, Ctrl+Z hoàn tác.</p>
                 </div>
               </div>
               <hr />
@@ -235,7 +278,7 @@
                 <hr />
                 <h3 id="aptSelName"></h3>
                 <label class="field"><span>Tên phòng</span><input class="num" id="aptName" type="text" maxlength="40" autocomplete="off" spellcheck="false" aria-label="Tên phòng" style="font-family: var(--font)" /></label>
-                <p class="hint">Đổi kích thước, màu sàn, màu tường của phòng này ở mục Phòng phía trên. Bật "Chỉnh bố cục" để kéo phòng sang chỗ khác và kéo tay nắm đổi cỡ: phòng kéo đè lên phòng khác thì nằm trên và khuyết phần phòng dưới (phím mũi tên dời 10 cm, giữ Shift thì 50 cm, Delete xóa phòng).</p>
+                <details class="help"><summary>Hướng dẫn</summary><p class="hint">Đổi kích thước, màu sàn, màu tường của phòng này ở mục Phòng phía trên. Bật "Chỉnh bố cục" để kéo phòng sang chỗ khác và kéo tay nắm đổi cỡ: phòng kéo đè lên phòng khác thì nằm trên và khuyết phần phòng dưới (phím mũi tên dời 10 cm, giữ Shift thì 50 cm, Delete xóa phòng).</p></details>
                 <div class="row" style="margin-top: 6px">
                   <button class="btn pri" id="aptEnter" type="button">Thiết kế phòng này</button>
                   <button class="btn danger" id="aptDel" type="button" title="Xóa phòng này khỏi căn hộ, kèm toàn bộ bản vẽ của phòng (Delete). Có thể Hoàn tác.">Xóa phòng</button>

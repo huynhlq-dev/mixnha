@@ -3,7 +3,7 @@ import { FLOOR_COLORS, WALL_COLORS } from '../data/palettes';
 import { WALL_KEYS } from '../data/walls';
 import type { RoomId } from '../data/rooms';
 import { normHex } from './color';
-import { clamp } from './geometry';
+import { clamp, wallLength } from './geometry';
 import { LIMITS, ROOM_DIM_LIMITS, type RoomDimKey } from './limits';
 import type { Registry } from './registry';
 import { fitOpening } from './room';
@@ -176,6 +176,40 @@ export function setRoomDim(l: Layout, key: RoomDimKey, v: number): number {
     }
   }
   return val;
+}
+
+/** Món đã sao chép (Ctrl+C): bản chụp của món cùng nơi nó nằm (sàn hoặc cạnh tường). */
+export interface Clip {
+  scope: Scope;
+  item: AnyItem;
+}
+
+/** Sao chép một món vào bộ nhớ tạm. Bản chụp độc lập, sửa hay xóa món gốc sau đó không ảnh hưởng. */
+export function copyItem(l: Layout, sel: Selection): Clip | null {
+  const src = findItem(l, sel);
+  return src ? { scope: sel.scope, item: JSON.parse(JSON.stringify(src)) as AnyItem } : null;
+}
+
+/**
+ * Dán món đã sao chép vào bố trí này (có thể là phòng khác), lệch 20 cm mỗi lần dán liền nhau (nth = 1, 2, ...) và kẹp trong phòng.
+ * Bản dán không khóa. Đồ gắn tường dán lên đúng cạnh tường cũ của phòng này.
+ */
+export function pasteItem(l: Layout, clip: Clip, nextUid: NextUid, nth = 1): Selection | null {
+  const copy = JSON.parse(JSON.stringify(clip.item)) as AnyItem;
+  copy.uid = nextUid();
+  delete copy.locked;
+  const off = 20 * nth;
+  if (clip.scope === 'floor') {
+    const f = copy as FloorItem;
+    f.x = clamp(f.x + off, 0, l.W);
+    f.y = clamp(f.y + off, 0, l.H);
+  } else {
+    const w = copy as WallItem;
+    w.x = clamp(w.x + off, 0, wallLength(l, clip.scope));
+    w.y = clamp(w.y, 0, Math.max(0, l.ceil - w.h));
+  }
+  listOf(l, clip.scope).push(copy);
+  return { scope: clip.scope, uid: copy.uid };
 }
 
 /** Nhân đôi một món, lệch 20 cm. Món bản sao không khóa. */

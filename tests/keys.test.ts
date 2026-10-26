@@ -66,3 +66,26 @@ describe('phím tắt khi đang chọn món (giữ nguyên như trước)', () =
     expect(keyAction(key('ArrowDown'), ctx({ hasSel: true }))).toEqual({ type: 'nudge', dir: 'down', step: 5 });
   });
 });
+
+describe('Ctrl+C, Ctrl+V, Ctrl+D', () => {
+  const sel = ctx({ hasSel: true, selFloor: true });
+
+  it('Ctrl+D nhân đôi và Ctrl+C sao chép khi đang chọn món; Cmd (Mac) cũng được', () => {
+    expect(keyAction(key('d', { ctrl: true }), sel)).toEqual({ type: 'duplicate' });
+    expect(keyAction(key('c', { ctrl: true }), sel)).toEqual({ type: 'copy' });
+    expect(keyAction(key('C', { meta: true }), sel)).toEqual({ type: 'copy' });
+  });
+
+  it('chưa chọn món thì Ctrl+D và Ctrl+C không làm gì (để trình duyệt tự xử lý), nhưng Ctrl+V vẫn dán được', () => {
+    expect(keyAction(key('d', { ctrl: true }), ctx())).toBeNull();
+    expect(keyAction(key('c', { ctrl: true }), ctx())).toBeNull();
+    expect(keyAction(key('v', { ctrl: true }), ctx())).toEqual({ type: 'paste' });
+  });
+
+  it('đang gõ chữ, trong hộp thoại, hoặc kèm Shift/Alt thì không phải phím tắt của bản vẽ', () => {
+    expect(keyAction(key('v', { ctrl: true, typing: true }), sel)).toBeNull();
+    expect(keyAction(key('c', { ctrl: true, inDialog: true }), sel)).toBeNull();
+    expect(keyAction(key('c', { ctrl: true, shift: true }), sel)).toBeNull();
+    expect(keyAction(key('v', { ctrl: true, alt: true }), sel)).toBeNull();
+  });
+});

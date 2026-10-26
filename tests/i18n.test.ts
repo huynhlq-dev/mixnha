@@ -26,7 +26,7 @@ import { renderPlan } from '../src/views/plan';
 afterEach(() => setLang('vi'));
 
 /** Chữ không cần dịch: tên thương hiệu, số, ký hiệu. */
-const NO_TRANSLATE = new Set(['Mix Nhà', '3D', '−', '+', '−90°', '+90°', '↺ 90°', '↻ 90°']);
+const NO_TRANSLATE = new Set(['Mix Nhà', '3D', '−', '+', '−90°', '+90°', '↺ 90°', '↻ 90°', '×', '›', '?', '/', '💡', '←↑↓→', 'Ctrl', 'Shift', 'Delete', 'Esc', 'C', 'D', 'R', 'V', 'Z']);
 
 const root = join(__dirname, '..');
 
@@ -335,8 +335,8 @@ describe('giao diện do code sinh ra theo ngôn ngữ', () => {
     expect(aptListHtml(rs)).toContain('<h3>Rooms</h3>');
     expect(aptListHtml(rs)).toMatch(/· \d+ items?</);
     const info = aptInfoHtml(rs);
-    expect(info).toContain('<dt>Interior area</dt>');
-    expect(info).toContain('<dt>Rooms</dt><dd>2</dd>');
+    expect(info).toContain('<b>2</b><span>Rooms</span>');
+    expect(info).toContain('<span>Interior area</span>');
   });
 
   it('mặt bằng một phòng: tiêu đề, mô tả đọc và trạng thái', () => {

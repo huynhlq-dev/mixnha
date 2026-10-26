@@ -169,6 +169,12 @@ export class Library {
     this.render();
   }
 
+  /** Mở nhóm đầu tiên của kiểu xem hiện tại (nếu chưa mở nhóm nào) để người dùng thấy ngay có đồ gì. */
+  revealFirst(): void {
+    const first = libraryGroups(this.reg, this.mode, '')[0];
+    if (first && this.open !== first.id) this.toggle(first.id);
+  }
+
   /** Chọn một nhóm thì mở danh sách của nhóm đó và đóng nhóm đang mở; chọn lại nhóm đang mở thì đóng. */
   toggle(id: string): void {
     this.open = this.open === id ? null : id;

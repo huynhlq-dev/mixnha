@@ -210,10 +210,11 @@ describe('cột bên và tab khi xem cả căn hộ', () => {
   it('số liệu tổng: số phòng, diện tích, số món', () => {
     const rs = rooms();
     const html = aptInfoHtml(rs);
-    expect(html).toContain('<dt>Số phòng</dt><dd>4</dd>');
+    // ba số lớn (phòng, diện tích trong nhà, món đồ) và dòng tách diện tích phòng
+    expect(html).toContain('<b>4</b><span>Số phòng</span>');
+    expect(html).toContain('<b>48,4 m²</b><span>Diện tích trong nhà</span>');
     expect(html).toContain('<dt>Diện tích phòng</dt><dd>48,4 m²</dd>');
-    expect(html).toContain('<dt>Diện tích trong nhà</dt>');
-    expect(html).toContain('Số món đồ');
+    expect(html).toContain('<span>Số món đồ</span>');
     // chưa tính khoảng trống thì không có dòng hành lang
     expect(html).not.toContain('Hành lang');
   });
@@ -225,7 +226,7 @@ describe('cột bên và tab khi xem cả căn hộ', () => {
     expect(interior.gaps).toBeGreaterThan(5);
     expect(html).toContain('<dt>Hành lang, khoảng trống</dt>');
     expect(html).toContain(`<dd>${fm(interior.gaps)} m²</dd>`);
-    expect(html).toContain(`<dd class="tot">${fm(interior.total)} m²</dd>`);
+    expect(html).toContain(`<div class="chip tot"><span class="ci" aria-hidden="true">📐</span><b>${fm(interior.total)} m²</b><span>Diện tích trong nhà</span>`);
     expect(html).toContain('được tính vào diện tích trong nhà');
   });
 
@@ -234,7 +235,10 @@ describe('cột bên và tab khi xem cả căn hộ', () => {
     expect(inRoom).toContain('data-room="khach" aria-pressed="true"');
     expect((inRoom.match(/aria-pressed="true"/g) ?? []).length).toBe(1);
     const overview = roomTabsHtml(DEFAULT_ROOMS, 'khach', true);
-    expect(overview).not.toContain('aria-pressed="true"');
+    // xem cả căn: chỉ tab "Cả căn hộ" (đứng đầu) được chọn, không phòng nào
+    expect((overview.match(/aria-pressed="true"/g) ?? []).length).toBe(1);
+    expect(overview).toContain('data-apt="1" aria-pressed="true"');
+    expect(inRoom).toContain('data-apt="1" aria-pressed="false"');
     expect((overview.match(/data-room=/g) ?? []).length).toBe(4);
     // nút về cả căn hộ nằm ở đầu khung vẽ, không còn là một tab
     expect(inRoom).not.toContain('data-view');

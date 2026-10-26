@@ -33,6 +33,9 @@ export type KeyAction =
   | { type: 'undo' }
   | { type: 'redo' }
   | { type: 'remove' }
+  | { type: 'duplicate' }
+  | { type: 'copy' }
+  | { type: 'paste' }
   | { type: 'rotate'; delta: number }
   | { type: 'nudge'; dir: Dir; step: number }
   | { type: 'escape' };
@@ -49,6 +52,11 @@ export function keyAction(k: KeyInfo, c: KeyContext): KeyAction | null {
     if (k.alt) return null;
     if (key === 'z') return k.shift ? { type: 'redo' } : { type: 'undo' };
     if (key === 'y' && !k.shift) return { type: 'redo' };
+    if (k.shift) return null;
+    // Ctrl+D (không để trình duyệt thêm dấu trang), Ctrl+C / Ctrl+V cho món đang chọn; dán được cả khi chưa chọn gì
+    if (key === 'd' && c.hasSel) return { type: 'duplicate' };
+    if (key === 'c' && c.hasSel) return { type: 'copy' };
+    if (key === 'v') return { type: 'paste' };
     return null;
   }
   if (k.alt || !(c.hasSel || c.selOpening || c.selRoom)) return null;

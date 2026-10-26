@@ -1,0 +1,95 @@
+/*
+ * Giao diện "đọc sách": không màu, giống máy đọc sách. Chọn bằng nút giao diện (sáng → tối → đọc sách), data-theme="mono" trên <html>.
+ * Màu nền, chữ, viền đổi sang thang xám qua biến; màu riêng của từng món (viết thẳng trong bản vẽ SVG, ảnh 3D) được đưa về xám bằng
+ * filter trên <html>. Không dùng màu để phân biệt trạng thái nữa: đạt, nên xem lại, lỗi khác nhau ở kiểu viền và biểu tượng.
+ * Không đổ bóng, không chuyển động, để màn hình giấy điện tử không bị nhòe.
+ */
+:root[data-theme='mono'] {
+  color-scheme: light;
+  --bg: #e6e6e6;
+  --surface: #f7f7f7;
+  --surface2: #d9d9d9;
+  --ink: #000000;
+  --muted: #333333;
+  --line: #6b6b6b;
+  --accent: #000000;
+  --accent-ink: #f7f7f7;
+  --accent-soft: #cccccc;
+  --warn: #000000;
+  --caution: #333333;
+  --ok: #1a1a1a;
+  --grid: #cfcfcf;
+  --hall: #cdcdcd;
+  filter: grayscale(1);
+}
+
+:root[data-theme='mono'] *,
+:root[data-theme='mono'] *::before,
+:root[data-theme='mono'] *::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+/* viền rõ hơn trên nền xám */
+:root[data-theme='mono'] .btn,
+:root[data-theme='mono'] .inp,
+:root[data-theme='mono'] .num,
+:root[data-theme='mono'] .card,
+:root[data-theme='mono'] .healthbox,
+:root[data-theme='mono'] .chip,
+:root[data-theme='mono'] .tpl,
+:root[data-theme='mono'] .aptitem,
+:root[data-theme='mono'] .menu,
+:root[data-theme='mono'] .emptycard {
+  border-color: var(--ink);
+}
+:root[data-theme='mono'] .btn.util {
+  border-color: transparent;
+}
+
+/* trạng thái: đạt = vòng viền liền, nên xem lại = vòng viền đứt, lỗi = chấm đặc và khung dày (biểu tượng ✓ ! ✕ vẫn đi kèm) */
+:root[data-theme='mono'] .status {
+  background: var(--surface);
+  border-color: var(--ink);
+}
+:root[data-theme='mono'] .status.warn {
+  border-style: dashed;
+  border-width: 2px;
+}
+:root[data-theme='mono'] .status.bad {
+  border-width: 3px;
+}
+:root[data-theme='mono'] .status.good::before,
+:root[data-theme='mono'] .status.warn::before,
+:root[data-theme='mono'] .hl.ok .hi,
+:root[data-theme='mono'] .hl.warn .hi,
+:root[data-theme='mono'] .hbadge.ok,
+:root[data-theme='mono'] .hbadge.warn {
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+}
+:root[data-theme='mono'] .status.warn::before,
+:root[data-theme='mono'] .hl.warn .hi,
+:root[data-theme='mono'] .hbadge.warn {
+  border-style: dashed;
+}
+:root[data-theme='mono'] .hbadge i {
+  background: transparent;
+}
+:root[data-theme='mono'] .status.bad::before,
+:root[data-theme='mono'] .hl.bad .hi,
+:root[data-theme='mono'] .hbadge.bad {
+  background: var(--ink);
+  color: var(--surface);
+}
+
+/* bản vẽ: món đang chọn viền đứt, món lỗi viền đặc dày, nên không lẫn với nhau khi cùng một màu đen */
+:root[data-theme='mono'] svg .selring {
+  stroke-dasharray: 7 4 !important;
+}
+:root[data-theme='mono'] svg .it[data-sel] {
+  filter: none;
+}

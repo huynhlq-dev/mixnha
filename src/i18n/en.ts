@@ -361,7 +361,6 @@ export const EN: Readonly<Record<string, string>> = {
   'Xuất file': 'Export file',
   'Nhập file .json do người khác gửi hoặc do bạn đã lưu': 'Import a .json file sent by someone else or saved earlier',
   'Nhập file': 'Import file',
-  'Đổi giao diện sáng, tối': 'Switch between light and dark theme',
   'Chế độ tối': 'Dark mode',
   'Ngôn ngữ': 'Language',
   'Nhắc sao lưu': 'Backup reminder',
@@ -573,4 +572,8 @@ export const EN: Readonly<Record<string, string>> = {
   '1 phòng ngủ': '1 bedroom',
   '2 phòng ngủ': '2 bedrooms',
   'Nhà phố': 'Town house',
+  'Chế độ đọc sách': 'Reader mode',
+  'Chế độ sáng': 'Light mode',
+  'Đổi giao diện': 'Switch theme',
+  'Đổi giao diện: sáng, tối, đọc sách (không màu)': 'Switch theme: light, dark, reader (no color)',
 };

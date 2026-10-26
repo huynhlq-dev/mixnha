@@ -3,6 +3,7 @@ import '../styles/tokens.css';
 import '../styles/base.css';
 import '../styles/chrome.css';
 import '../styles/gallery.css';
+import '../styles/mono.css';
 
 import { registry } from '../core/registry';
 import { validateData } from '../core/validate';

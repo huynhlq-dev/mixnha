@@ -10,7 +10,7 @@
     <script>
       // đặt giao diện đã chọn trước khi vẽ trang để không nháy sáng; cùng khóa với src/ui/theme.ts
       try {
-        document.documentElement.dataset.theme = localStorage.getItem('xepnha2d:theme') === 'dark' ? 'dark' : 'light';
+        document.documentElement.dataset.theme = ['dark', 'mono'].includes(localStorage.getItem('xepnha2d:theme')) ? localStorage.getItem('xepnha2d:theme') : 'light';
       } catch (e) {}
     </script>
   </head>
@@ -23,7 +23,7 @@
         </h1>
         <div class="topbtns">
           <a class="btn" href="./index.html">Về trình thiết kế</a>
-          <button class="btn" id="btnTheme" type="button" aria-pressed="false" title="Đổi giao diện sáng, tối"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M13.6 9.8A5.8 5.8 0 0 1 6.2 2.4a5.8 5.8 0 1 0 7.4 7.4Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg>Chế độ tối</button>
+          <button class="btn" id="btnTheme" type="button" aria-pressed="false" title="Đổi giao diện: sáng, tối, đọc sách (không màu)"><svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" data-theme-icon></svg><span data-theme-label>Chế độ tối</span></button>
           <div class="lang" id="langBox" role="group" aria-label="Ngôn ngữ">
             <button class="btn" type="button" data-lang="vi" lang="vi" aria-pressed="true" title="Tiếng Việt" data-i18n-skip>VI</button>
             <button class="btn" type="button" data-lang="en" lang="en" aria-pressed="false" title="English" data-i18n-skip>EN</button>

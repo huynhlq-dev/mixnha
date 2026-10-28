@@ -242,6 +242,18 @@ export class Scene3D {
     this.raf = 0;
   }
 
+  /**
+   * Vẽ khung hình hiện tại rồi trả canvas để chụp ảnh. Phải gọi toBlob ngay trong cùng lượt chạy, vì bộ đệm WebGL bị xóa sau khi hiện lên màn hình.
+   * Null nếu chưa có cảnh.
+   */
+  snapshotCanvas(): HTMLCanvasElement | null {
+    if (!this.renderer || !this.scene || !this.camera) return null;
+    this.applyCamera();
+    this.fadeWalls();
+    this.renderer.render(this.scene, this.camera);
+    return this.renderer.domElement;
+  }
+
   /** Dữ liệu đã đổi: dựng lại cảnh ở khung hình kế tiếp. */
   invalidate(): void {
     this.dirty = true;

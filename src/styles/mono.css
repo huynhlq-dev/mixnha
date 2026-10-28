@@ -42,7 +42,13 @@
 :root[data-theme='mono'] .tpl,
 :root[data-theme='mono'] .aptitem,
 :root[data-theme='mono'] .menu,
-:root[data-theme='mono'] .emptycard {
+:root[data-theme='mono'] .emptycard,
+:root[data-theme='mono'] body.focus .props,
+:root[data-theme='mono'] body.focus .stagehead,
+:root[data-theme='mono'] body.focus .wallsrow,
+:root[data-theme='mono'] body.focus .aptacts,
+:root[data-theme='mono'] body.focus .zoombar,
+:root[data-theme='mono'] body.focus .tip {
   border-color: var(--ink);
 }
 :root[data-theme='mono'] .btn.util {

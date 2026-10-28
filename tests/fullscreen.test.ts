@@ -89,3 +89,26 @@ describe('toàn màn hình của khung soạn thảo', () => {
     fs.set(false);
   });
 });
+
+describe('toàn màn hình báo cho phần giao diện khác', () => {
+  it('onChange chạy mỗi lần bật hoặc tắt, không chạy khi set cùng trạng thái', () => {
+    const { fs } = make();
+    const seen: boolean[] = [];
+    fs.onChange = (on) => seen.push(on);
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+    fs.set(true);
+    fs.set(true);
+    fs.set(false);
+    expect(seen).toEqual([true, false]);
+  });
+
+  it('khi tắt, onChange chạy trước lúc trả chỗ cuộn (bố cục thường đã dựng lại xong)', () => {
+    const { fs } = make();
+    const order: string[] = [];
+    fs.onChange = (on) => order.push(on ? 'on' : 'layout-back');
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => order.push('scroll'));
+    fs.set(true);
+    fs.set(false);
+    expect(order).toEqual(['on', 'layout-back', 'scroll']);
+  });
+});

@@ -58,6 +58,8 @@ import type { Scene3D } from '../views/scene3d';
 import { Stage2D } from '../views/stage2d';
 import type { Els } from './els';
 import { ExportDialog } from './exportDialog';
+import { downloadBlob } from './dialog';
+import { FocusLayout } from './focus';
 import { Fullscreen } from './fullscreen';
 import { ImportDialog } from './importDialog';
 import { NewProjectDialog } from './newProject';
@@ -73,6 +75,7 @@ import { bindSwatches, swatchesHtml, type SwatchApp, type SwatchKey } from './sw
 import { designHealth } from '../core/health';
 import { apartmentHealthHtml, healthHtml } from './health';
 import { bindMenu } from './menu';
+import { canvasToPng, imageFilename, svgToPng } from './snapshot';
 import { Tips } from './tips';
 import { Toast } from './toast';
 import { t, tn } from '../i18n';
@@ -89,6 +92,7 @@ export interface AppDeps {
   /** Thay được khi kiểm thử. */
   download?: (filename: string, text: string) => void;
   copy?: (text: string) => Promise<boolean>;
+  saveImage?: (filename: string, image: Blob) => void;
 }
 
 /** Câu báo khi thao tác trên món đã khóa (đọc lúc cần để theo ngôn ngữ đang chọn). */
@@ -163,6 +167,8 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
   private readonly library: Library;
   private readonly mobile: MobileUi;
   private readonly full: Fullscreen;
+  private readonly focus: FocusLayout;
+  private readonly saveImage: (filename: string, image: Blob) => void;
   private readonly toast: Toast;
   private readonly exportDlg: ExportDialog;
   private readonly importDlg: ImportDialog;
@@ -198,6 +204,9 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     this.stage.onZoomChange = () => this.updateZoomBar();
     this.toast = new Toast(els.toast);
     this.full = new Fullscreen(els.btnFull, els.fullLabel);
+    this.focus = new FocusLayout({ setScope: (scope) => this.library.setScope(scope) });
+    this.full.onChange = (on) => this.focus.setFullscreen(on);
+    this.saveImage = d.saveImage ?? downloadBlob;
     this.mobile = new MobileUi(els, this, els.editor);
     this.library = new Library(els, this.registry, (id) => {
       this.drop(id, null);
@@ -212,6 +221,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
       setMeta: (m) => {
         this.meta = m;
         this.persist();
+        this.paintProject();
       },
       now: () => new Date(this.now()),
       onExported: () => this.exported(),
@@ -228,6 +238,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
 
     this.tips = new Tips(els, this.kv);
     bindMenu(els.btnMore, els.moreMenu);
+    bindMenu(els.btnProj, els.projMenu);
     bindMenu(els.btnHelp, els.helpMenu);
     bindMenu(els.btnInfo, els.infoMenu);
     bindProps(els, this);
@@ -272,6 +283,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     this.stage.dispose();
     this.scene?.dispose();
     this.mobile.dispose();
+    this.focus.dispose();
     this.full.dispose();
     this.toast.dispose();
   }
@@ -1425,6 +1437,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     this.updateRemind();
     this.newDlg.languageChanged();
     this.tips.paint();
+    this.focus.languageChanged();
   }
 
   /** Đã đổi giao diện sáng, tối. Mặt bằng và mặt đứng tự đổi màu theo biến CSS; riêng cảnh 3D phải lấy lại màu. */
@@ -1485,6 +1498,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     const elev = v.mode === 'elev';
     // xem cả căn hộ: có Mặt bằng (sửa đồ ngay trên mô hình) và 3D (chỉ xem), không có Mặt đứng; cột trái thêm danh sách phòng, cột phải thêm số liệu tổng
     els.editor.dataset.view = ov ? 'overview' : 'room';
+    this.paintProject();
     els.modes.querySelector('[data-mode="elev"]')?.toggleAttribute('hidden', ov);
     els.propsRoom.hidden = ov && is3d;
     // mục Phòng (cỡ, màu sàn, màu tường) là của phòng đang chọn: trên mô hình chỉ hiện khi đã chọn một phòng
@@ -1526,6 +1540,32 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
           : t('Xóa mọi món đặt trên sàn, đồ gắn tường giữ nguyên. Món đã khóa được giữ lại. Có thể Hoàn tác.');
     this.updateHistoryButtons();
     this.updateGuides();
+  }
+
+  /** Tên dự án trên thanh trên của chế độ tập trung; chưa đặt tên thì hiện tên mẫu. */
+  private paintProject(): void {
+    this.els.projName.textContent = this.meta.name || t('Căn hộ của tôi');
+  }
+
+  /** Nút Chụp ảnh: lưu khung đang xem (mặt bằng, mặt đứng hoặc 3D) thành ảnh PNG. */
+  private async snapshot(): Promise<void> {
+    const { els, v } = this;
+    try {
+      let image: Blob;
+      if (v.mode === '3d') {
+        const canvas = this.scene?.snapshotCanvas();
+        if (!canvas) throw new Error('3D chưa sẵn sàng');
+        image = await canvasToPng(canvas);
+      } else {
+        image = await svgToPng(els.plan);
+      }
+      const view = v.mode === 'plan' ? 'mat-bang' : v.mode === 'elev' ? `mat-dung-${v.wall.toLowerCase()}` : '3d';
+      const filename = imageFilename([this.meta.name, v.overview ? 'can-ho' : this.defOf(this.room).name, view], new Date(this.now()));
+      this.saveImage(filename, image);
+      this.notice(t('Đã lưu ảnh {filename}', { filename }));
+    } catch {
+      this.notice(t('Chưa chụp được ảnh. Hãy thử lại sau khi khung vẽ hiện xong.'));
+    }
   }
 
   /** Khung "Kiểm tra thiết kế": một phòng thì ba mục có màu, cả căn hộ thì mỗi phòng một dòng. Không hiện ở 3D cả căn (chỉ để xem). */
@@ -1633,6 +1673,8 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
     for (const dlg of [els.dlgNew, els.dlgExport, els.dlgImport]) dlg.addEventListener('close', () => this.updateGuides());
     els.emptyAdd.addEventListener('click', () => {
       if (this.mobile.isMobile) this.mobile.setLib(true);
+      // chế độ tập trung: thư viện nằm trong bảng Nội thất của thanh trái
+      else if (this.focus.active) this.focus.open('furniture');
       else this.library.revealFirst();
     });
     els.btnApt.addEventListener('click', () => void this.zoomToApartment());
@@ -1700,6 +1742,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
 
     els.btnIso.addEventListener('click', () => this.scene?.viewIso());
     els.btnTop.addEventListener('click', () => this.scene?.viewTop());
+    els.btnShot.addEventListener('click', () => void this.snapshot());
     els.btnZi.addEventListener('click', () => this.scene?.zoom(0.8));
     els.btnZo.addEventListener('click', () => this.scene?.zoom(1.25));
     els.btnFull.addEventListener('click', () => {
@@ -1750,6 +1793,7 @@ export class App implements Host, PropsApp, PenApp, SwatchApp, MobileApp {
       case 'escape':
         if (this.v.overview && (this.v.sel || this.v.opening)) this.select(null);
         else if (this.v.overview && this.v.aptSel) this.aptSelect(null);
+        else if (this.focus.panel) this.focus.close();
         else if (this.full.on) this.full.set(false);
         else if (this.mobile.libOpen) this.mobile.setLib(false);
         else if (this.v.pen) this.setTool(null);

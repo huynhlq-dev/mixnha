@@ -7,6 +7,7 @@ import './styles/library.css';
 import './styles/props.css';
 import './styles/scene3d.css';
 import './styles/dialogs.css';
+import './styles/focus.css';
 import './styles/mono.css';
 
 import { DomTranslator } from './i18n/dom';

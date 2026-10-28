@@ -2,12 +2,15 @@ import { t } from '../i18n';
 /**
  * Toàn màn hình cho cả trình thiết kế, ở mặt bằng, mặt đứng và 3D: khung soạn thảo phủ kín màn hình, vẫn có thanh công cụ,
  * thư viện bên trái và bảng chỉnh sửa bên phải; đầu trang, nhắc sao lưu và chân trang được ẩn (lớp "fs" trên <body>, xem editor.css).
+ * Trên máy tính, bố cục bên trong do ui/focus.ts dựng lại thành chế độ tập trung (lắng nghe onChange).
  * Thử toàn màn hình thật của trình duyệt trên cả trang (để thông báo và hộp thoại vẫn hiện); không được (iPhone, khung nhúng)
  * thì chỉ phủ kín cửa sổ bằng CSS. Thoát bằng nút, phím Esc hoặc phím thoát của trình duyệt.
  */
 export class Fullscreen {
   private readonly off: (() => void)[] = [];
   private scrollY = 0;
+  /** Gọi sau mỗi lần bật hoặc tắt (kể cả khi trình duyệt tự thoát bằng phím Esc), để phần giao diện khác đổi theo. */
+  onChange: ((on: boolean) => void) | null = null;
 
   constructor(
     private readonly btn: HTMLButtonElement,
@@ -38,6 +41,8 @@ export class Fullscreen {
     this.btn.setAttribute('aria-pressed', String(on));
     this.label.textContent = on ? t('Thoát toàn màn hình') : t('Toàn màn hình');
     document.documentElement.style.overflow = on ? 'hidden' : '';
+    // trước khi trả chỗ cuộn: bố cục thường phải được dựng lại xong thì chỗ cuộn mới đúng
+    this.onChange?.(on);
     if (on) {
       try {
         void document.documentElement.requestFullscreen?.()?.catch(() => {});

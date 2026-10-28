@@ -248,3 +248,62 @@ describe('nhóm Phòng trong thư viện', () => {
     expect(html).toContain('data-id="room:ngu"');
   });
 });
+
+describe('thư viện lọc theo phạm vi (chế độ tập trung)', () => {
+  it('nội thất chỉ có nhóm đồ, cửa chỉ có cửa đi và cửa sổ, phòng chỉ có nhóm Phòng', () => {
+    expect(libraryGroups(registry, 'plan', '', 'furniture').map((g) => g.id)).toEqual(['sleeping', 'living', 'dining', 'work', 'bathroom', 'balcony']);
+    expect(libraryGroups(registry, 'plan', '', 'openings').map((g) => g.id)).toEqual(['open-door', 'open-win']);
+    expect(libraryGroups(registry, 'plan', '', 'rooms').map((g) => g.id)).toEqual(['rooms']);
+    // không đặt phạm vi: như cũ
+    expect(libraryGroups(registry, 'plan', '', null)).toEqual(libraryGroups(registry, 'plan', ''));
+  });
+
+  it('phạm vi vẫn theo kiểu xem: mặt đứng nội thất là đồ tường; 3D cả căn chỉ có phòng dù phạm vi nào', () => {
+    expect(libraryGroups(registry, 'elev', '', 'furniture').map((g) => g.id)).toEqual(['wall-kitchen', 'wall-hang', 'wall-tall']);
+    expect(libraryGroups(registry, 'apartment3d', '', 'openings').map((g) => g.id)).toEqual(['rooms']);
+  });
+
+  it('tìm kiếm chỉ trong phạm vi đang lọc', () => {
+    expect(libraryGroups(registry, 'plan', 've sinh', 'furniture').map((g) => g.id)).toEqual(['bathroom']);
+    expect(libraryGroups(registry, 'plan', 've sinh', 'openings').map((g) => g.id)).toEqual(['open-door']);
+  });
+
+  const make = () => {
+    const els = { library: document.createElement('div'), q: document.createElement('input'), libHint: document.createElement('p') };
+    const lib = new Library(els, registry, vi.fn());
+    lib.setMode('plan');
+    const titles = () => [...els.library.querySelectorAll('.cathead .ct')].map((e) => e.textContent);
+    return { els, lib, titles };
+  };
+
+  it('đặt phạm vi thì chỉ hiện các nhóm của phạm vi đó và mở sẵn nhóm đầu tiên', () => {
+    const { els, lib, titles } = make();
+    lib.setScope('openings');
+    expect(titles()).toEqual(['Cửa đi', 'Cửa sổ']);
+    expect(els.library.querySelector('.cathead')!.getAttribute('aria-expanded')).toBe('true');
+    expect(els.library.querySelectorAll('.item').length).toBeGreaterThan(0);
+    lib.setScope('rooms');
+    expect(titles()).toEqual(['Phòng (thêm vào căn hộ)']);
+    expect(els.library.querySelectorAll('.item').length).toBe(ROOM_TYPE_IDS.length);
+  });
+
+  it('đổi phạm vi xóa ô tìm kiếm; bỏ phạm vi (null) thì về đủ nhóm, không nhóm nào mở', () => {
+    const { els, lib, titles } = make();
+    lib.setScope('furniture');
+    els.q.value = 'giuong';
+    els.q.dispatchEvent(new Event('input'));
+    lib.setScope('openings');
+    expect(els.q.value).toBe('');
+    lib.setScope(null);
+    expect(titles()).toHaveLength(libraryGroups(registry, 'plan', '').length);
+    expect(els.library.querySelectorAll('.item').length).toBe(0);
+  });
+
+  it('đổi kiểu xem khi đang lọc: nhóm đang mở không còn thì mở nhóm đầu của kiểu xem mới', () => {
+    const { els, lib } = make();
+    lib.setScope('furniture');
+    lib.setMode('elev');
+    const open = els.library.querySelector('.cathead[aria-expanded="true"]') as HTMLElement | null;
+    expect(open?.dataset.cat).toBe('wall-kitchen');
+  });
+});

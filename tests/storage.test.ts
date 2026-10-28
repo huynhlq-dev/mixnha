@@ -17,7 +17,9 @@ import {
   FILE_LIMITS,
   isoLocal,
   layoutFromImported,
+  dateStamp,
   makeFilename,
+  slugify,
   parseDesignFile,
   serializeFile,
   summarizeExport,
@@ -414,6 +416,10 @@ describe('xuất file', () => {
     expect(makeFilename('', NOW)).toBe('ban-thiet-ke-20261020.json');
     expect(makeFilename(undefined, new Date(2027, 0, 5))).toBe('ban-thiet-ke-20270105.json');
     expect(makeFilename('a'.repeat(100), NOW)).toBe(`${'a'.repeat(40)}-20261020.json`);
+    expect(slugify('Phòng ngủ')).toBe('phong-ngu');
+    expect(slugify('***')).toBe('');
+    expect(slugify(undefined)).toBe('');
+    expect(dateStamp(NOW)).toBe('20261020');
   });
 
   it('cleanText bỏ thẻ HTML, ký tự điều khiển và cắt độ dài', () => {

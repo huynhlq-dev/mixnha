@@ -28,6 +28,12 @@ export interface LibGroup {
  */
 export type LibMode = Mode | 'apartment' | 'apartment3d';
 
+/**
+ * Phạm vi của thư viện trong chế độ tập trung (mỗi nút ở thanh trái một phạm vi): đồ nội thất (đồ sàn, đồ gắn tường), cửa đi và cửa sổ,
+ * hoặc các loại phòng. Không đặt phạm vi thì hiện tất cả, như bố cục thường.
+ */
+export type LibScope = 'furniture' | 'openings' | 'rooms';
+
 /** Hai nhóm cửa nằm cuối thư viện ở mọi kiểu xem, vì cửa nằm trên tường và thấy được ở cả mặt bằng, mặt đứng lẫn 3D. */
 const OPENING_GROUPS = [
   { id: 'open-door', title: 'Cửa đi', kind: 'door' },
@@ -38,8 +44,9 @@ const OPENING_GROUPS = [
  * Các nhóm hiện trong thư viện theo kiểu xem: mặt bằng có đồ sàn, mặt đứng có đồ gắn tường,
  * 3D có cả hai (đồ tường dùng tên nhóm riêng cho 3D); sau cùng là nhóm cửa đi và cửa sổ ở mọi kiểu xem.
  * query lọc theo tên và tên nhóm, không phân biệt dấu. Chỉ món live mới hiện; thứ tự theo khai báo trong data/.
+ * scope (nếu có) thu hẹp vào một loại: đồ nội thất, cửa, hoặc phòng. Xem 3D cả căn hộ chỉ có phòng nên không theo scope.
  */
-export function libraryGroups(reg: Registry, mode: LibMode, query: string): LibGroup[] {
+export function libraryGroups(reg: Registry, mode: LibMode, query: string, scope?: LibScope | null): LibGroup[] {
   const place = mode === 'plan' || mode === 'apartment' ? 'floor' : mode === 'elev' ? 'wall' : null;
   const q = plain(query.trim());
   const groups: LibGroup[] = [];
@@ -56,7 +63,7 @@ export function libraryGroups(reg: Registry, mode: LibMode, query: string): LibG
     roomGroup();
     return groups;
   }
-  for (const cat of reg.categories) {
+  for (const cat of !scope || scope === 'furniture' ? reg.categories : []) {
     if (place && cat.place !== place) continue;
     const title = tn(mode === '3d' && cat.place === 'wall' ? (cat.label3d ?? cat.name) : cat.name);
     const items = reg
@@ -65,14 +72,14 @@ export function libraryGroups(reg: Registry, mode: LibMode, query: string): LibG
       .map((it): LibItem => ({ id: it.id, name: tn(it.name), color: it.color, size: sizeLabel(it) }));
     if (items.length) groups.push({ id: cat.id, title, items });
   }
-  for (const g of OPENING_GROUPS) {
+  for (const g of !scope || scope === 'openings' ? OPENING_GROUPS : []) {
     const title = tn(g.title);
     const items = reg.openings
       .filter((p) => p.kind === g.kind && (!q || plain(`${p.name} ${tn(p.name)} ${g.title} ${title}`).includes(q)))
       .map((p): LibItem => ({ id: p.id, name: tn(p.name), color: p.color, size: p.kind === 'door' ? `${p.w} cm` : `${p.w} × ${p.h ?? 120} cm` }));
     if (items.length) groups.push({ id: g.id, title, items });
   }
-  roomGroup();
+  if (!scope || scope === 'rooms') roomGroup();
   return groups;
 }
 
@@ -133,6 +140,8 @@ export class Library {
   private mode: LibMode = 'plan';
   /** Nhóm đang mở. Chỉ một nhóm mở tại một lúc; null là đóng hết. */
   private open: string | null = null;
+  /** Phạm vi đang lọc (chế độ tập trung); null là hiện tất cả. */
+  private scope: LibScope | null = null;
 
   constructor(
     private readonly els: { library: HTMLElement; q: HTMLInputElement; libHint: HTMLElement },
@@ -166,12 +175,27 @@ export class Library {
     if (mode === 'apartment3d') this.open = 'rooms';
     else if (from === 'apartment3d') this.open = null;
     this.els.q.value = '';
+    // đang lọc theo phạm vi mà nhóm đang mở không còn trong kiểu xem này: mở nhóm đầu tiên thay vào
+    if (this.scope) {
+      const groups = libraryGroups(this.reg, mode, '', this.scope);
+      if (!groups.some((g) => g.id === this.open)) this.open = groups[0]?.id ?? null;
+    }
     this.render();
+  }
+
+  /** Lọc theo một loại (đồ nội thất, cửa, phòng) hoặc bỏ lọc (null). Đổi phạm vi thì xóa ô tìm kiếm và mở sẵn nhóm đầu tiên. */
+  setScope(scope: LibScope | null): void {
+    if (scope === this.scope) return;
+    this.scope = scope;
+    this.els.q.value = '';
+    this.open = null;
+    if (scope) this.revealFirst();
+    else this.render();
   }
 
   /** Mở nhóm đầu tiên của kiểu xem hiện tại (nếu chưa mở nhóm nào) để người dùng thấy ngay có đồ gì. */
   revealFirst(): void {
-    const first = libraryGroups(this.reg, this.mode, '')[0];
+    const first = libraryGroups(this.reg, this.mode, '', this.scope)[0];
     if (first && this.open !== first.id) this.toggle(first.id);
   }
 
@@ -188,7 +212,7 @@ export class Library {
   render(): void {
     const q = this.els.q.value;
     const searching = q.trim() !== '';
-    this.els.library.innerHTML = libraryHtml(libraryGroups(this.reg, this.mode, q), this.open, searching);
+    this.els.library.innerHTML = libraryHtml(libraryGroups(this.reg, this.mode, q, this.scope), this.open, searching);
     this.els.libHint.textContent = libraryHint(this.mode, searching);
   }
 }

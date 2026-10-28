@@ -8,7 +8,12 @@ export function openDialog(d: HTMLDialogElement): void {
 
 /** Tải một đoạn văn bản về máy dưới dạng file. */
 export function downloadText(filename: string, text: string, type = 'application/json'): void {
-  const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` }));
+  downloadBlob(filename, new Blob([text], { type: `${type};charset=utf-8` }));
+}
+
+/** Tải một khối dữ liệu (ảnh, file) về máy. */
+export function downloadBlob(filename: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;

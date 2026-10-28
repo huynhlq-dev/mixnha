@@ -145,15 +145,24 @@ export function byteLength(s: string): number {
   return new TextEncoder().encode(s).length;
 }
 
-/** Tên file tự tạo từ tên bản thiết kế và ngày: can-ho-cua-toi-20261020.json */
-export function makeFilename(name: string | undefined, now: Date): string {
-  const slug = plain(name ?? '')
+/** Tên dùng được trong tên file: không dấu, chữ thường, gạch nối, tối đa 40 ký tự. Rỗng nếu không còn gì. */
+export function slugify(name: string | undefined): string {
+  return plain(name ?? '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40)
     .replace(/-+$/g, '');
+}
+
+/** Ngày dạng 20261020, đi cuối tên file. */
+export function dateStamp(now: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
-  return `${slug || 'ban-thiet-ke'}-${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}.json`;
+  return `${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}`;
+}
+
+/** Tên file tự tạo từ tên bản thiết kế và ngày: can-ho-cua-toi-20261020.json */
+export function makeFilename(name: string | undefined, now: Date): string {
+  return `${slugify(name) || 'ban-thiet-ke'}-${dateStamp(now)}.json`;
 }
 
 /** Số phòng và số món sẽ nằm trong file, để hiện trong hộp thoại xuất. */

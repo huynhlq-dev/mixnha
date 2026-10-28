@@ -1,0 +1,563 @@
+/*
+ * Chế độ tập trung (lớp "focus" trên <body>, do ui/focus.ts đặt khi toàn màn hình trên máy tính): khung vẽ phủ gần kín màn hình, công cụ nằm ở
+ * thanh trên, thanh trái và hai thẻ nổi. Các nút, bảng có sẵn được chuyển vào chỗ mới (xem MOVES), nên phần dưới chỉ nói về bố cục, không đổi hành vi.
+ * Điện thoại và máy tính bảng dọc không vào chế độ này, vẫn dùng bố cục toàn màn hình cũ ở editor.css.
+ */
+.fsui {
+  display: none;
+}
+.fsslot {
+  display: contents;
+}
+.fsview {
+  display: none;
+}
+
+body.focus .editor {
+  --fs-top: 56px;
+  --fs-rail: 76px;
+  --fs-fly-w: 340px;
+  --fs-fly: 0px;
+  --fs-card: 288px;
+  --fs-gap: 12px;
+  /* hàng tên phòng phía trên khung vẽ và hàng trạng thái phía dưới: nằm ngoài khung vẽ nên không che bản vẽ */
+  --fs-head: 46px;
+  --fs-foot: 58px;
+  background: var(--bg);
+}
+body.focus .editor[data-fly] {
+  --fs-fly: var(--fs-fly-w);
+}
+@media (max-width: 1180px) {
+  body.focus .editor {
+    --fs-rail: 68px;
+    --fs-fly-w: 300px;
+    --fs-card: 256px;
+  }
+  /* màn hình hẹp: bảng nằm đè lên khung vẽ thay vì đẩy khung vẽ lại */
+  body.focus .editor[data-fly] {
+    --fs-fly: 0px;
+  }
+  body.focus .fsfly {
+    box-shadow: 8px 0 24px rgba(0, 0, 0, 0.18);
+  }
+}
+
+/* chỗ trống của bố cục thường: hai hàng công cụ, hàng trạng thái, các nút phóng to cũ (nút cần dùng đã chuyển đi chỗ khác) */
+body.focus .bar,
+body.focus .bar2,
+body.focus .statusrow,
+body.focus .stageacts {
+  display: none;
+}
+body.focus .body {
+  display: block;
+  min-height: 0;
+}
+body.focus .stage {
+  position: static;
+  display: block;
+  min-height: 0;
+  background: transparent;
+}
+
+/* khung vẽ: nằm giữa thanh trái và thẻ bên phải; ở 3D thì tràn dưới thẻ như ảnh dựng. Phía trên có hàng tên phòng, phía dưới có hàng trạng thái */
+body.focus .canvaswrap {
+  position: absolute;
+  z-index: 1;
+  flex: none;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  top: calc(var(--fs-top) + var(--fs-gap) + var(--fs-head));
+  bottom: calc(var(--fs-gap) + var(--fs-foot));
+  left: calc(var(--fs-rail) + var(--fs-fly) + var(--fs-gap));
+  right: calc(var(--fs-card) + 2 * var(--fs-gap));
+}
+body.focus .editor:has(#view3d:not([hidden])) .canvaswrap {
+  right: var(--fs-gap);
+}
+body.focus .canvaswrap > svg#plan,
+body.focus .canvaswrap > .view3d {
+  border-radius: 16px;
+}
+body.focus .emptycard {
+  bottom: auto;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* thanh trên */
+body.focus .fstop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: absolute;
+  z-index: 8;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--fs-top);
+  padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.fsbrand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 4px;
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.fsbrand svg {
+  flex: none;
+}
+.fsgrow {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.fssep {
+  flex: none;
+  width: 1px;
+  height: 22px;
+  background: var(--line);
+}
+body.focus .fstop .btn {
+  min-height: 34px;
+  white-space: nowrap;
+}
+body.focus .fstop .actgrp {
+  flex-wrap: nowrap;
+}
+body.focus #btnProj {
+  gap: 8px;
+  font-weight: 600;
+  max-width: 240px;
+}
+#projName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fsproj .menu {
+  left: 0;
+  right: auto;
+  min-width: 210px;
+}
+.fsproj .menu .btn {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ink);
+  font-weight: 500;
+}
+.fsproj .menu .btn:hover {
+  background: var(--surface2);
+}
+body.focus #btnExport {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+body.focus #btnExport:hover {
+  filter: brightness(1.08);
+}
+body.focus #btnTheme [data-theme-label] {
+  display: none;
+}
+@media (max-width: 1260px) {
+  body.focus .fstop .lbl,
+  body.focus #fullLabel {
+    display: none;
+  }
+}
+
+/* thanh trái: mỗi nút mở một bảng */
+body.focus .fsrail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: absolute;
+  z-index: 7;
+  top: var(--fs-top);
+  bottom: 0;
+  left: 0;
+  width: var(--fs-rail);
+  padding: 10px 6px;
+  overflow-y: auto;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+.railbtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 9px 2px 7px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+}
+.railbtn svg {
+  flex: none;
+}
+.railbtn span {
+  text-wrap: balance;
+}
+.railbtn:hover {
+  background: var(--surface2);
+  color: var(--ink);
+}
+.railbtn[aria-expanded='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+/* bảng mở ra từ thanh trái: đẩy khung vẽ sang phải thay vì che nó, để còn kéo đồ từ bảng thả vào bản vẽ */
+body.focus .fsfly {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  z-index: 7;
+  top: var(--fs-top);
+  bottom: 0;
+  left: var(--fs-rail);
+  width: var(--fs-fly-w);
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+}
+.fsflyhead {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.fsflyhead h2 {
+  font-size: 16px;
+}
+.fsflybody {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+}
+.fsfly h3 {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.fsfly hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 16px 0;
+}
+.fssec {
+  margin-bottom: 18px;
+}
+.fsflybody > section > .btn {
+  width: 100%;
+  justify-content: center;
+  margin-top: 16px;
+}
+.fsacts {
+  display: grid;
+  gap: 6px;
+}
+.fsacts .btn {
+  justify-content: flex-start;
+  width: 100%;
+}
+#infoText {
+  font-size: 13px;
+  color: var(--muted);
+}
+/* thư viện nằm trong bảng, cuộn cùng bảng */
+body.focus .lib {
+  position: static;
+  height: auto;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+body.focus .libin {
+  position: static;
+  padding: 0;
+  overflow: visible;
+}
+body.focus #aptList {
+  display: none;
+}
+/* tab phòng thành danh sách dọc */
+body.focus #rooms {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+body.focus #rooms .tab {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+body.focus #rooms .tab[aria-pressed='true'],
+body.focus #rooms .tab-all[aria-pressed='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+body.focus #rooms .tab-all {
+  margin: 0 0 6px;
+}
+body.focus .fsfly #rails .tab {
+  border-color: var(--line);
+}
+body.focus .fsfly #rails .tab[aria-pressed='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+body.focus #rooms .tab-all::after {
+  display: none;
+}
+body.focus .fsfly .legend {
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+}
+
+/* thẻ nổi bên phải: kiểu xem và hiển thị; chọn một món thì thẻ thành thuộc tính của món đó */
+body.focus .props {
+  position: absolute;
+  z-index: 6;
+  top: calc(var(--fs-top) + var(--fs-gap));
+  right: var(--fs-gap);
+  width: var(--fs-card);
+  min-height: 0;
+  /* chừa chỗ ở góc phải dưới cho nút xoay, phóng to khung 3D */
+  max-height: calc(100% - var(--fs-top) - 2 * var(--fs-gap) - var(--fs-foot) - 56px);
+  overflow-y: auto;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
+}
+body.focus .fsview {
+  display: block;
+  margin-bottom: 16px;
+}
+body.focus .fsview h3 {
+  margin-bottom: 8px;
+}
+body.focus .fsdisplay {
+  margin-top: 16px;
+}
+body.focus #modes {
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+body.focus #modes .tab {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  white-space: nowrap;
+}
+body.focus #modes .tab:not([aria-pressed='true']):hover {
+  background: var(--surface2);
+}
+body.focus #modes .tab[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+/* đang chọn món: ba kiểu xem thu thành một hàng, phần Hiển thị nhường chỗ cho thuộc tính */
+body.focus .props:has(#selBox:not([hidden]), #opBox:not([hidden])) .fsview .fshead,
+body.focus .props:has(#selBox:not([hidden]), #opBox:not([hidden])) .fsdisplay {
+  display: none;
+}
+body.focus .props:has(#selBox:not([hidden]), #opBox:not([hidden])) #modes {
+  flex-direction: row;
+  gap: 4px;
+}
+body.focus .props:has(#selBox:not([hidden]), #opBox:not([hidden])) #modes .tab {
+  flex: 1 1 0;
+  justify-content: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 6px 4px;
+  font-size: 12px;
+}
+/* các tùy chọn hiển thị là ô tích: nút có sẵn (bật tắt bằng aria-pressed, aria-checked) vẽ lại thành hàng có ô vuông */
+body.focus .fstoggles {
+  display: grid;
+  gap: 2px;
+}
+body.focus .fstoggles .btn {
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 34px;
+  padding: 5px 4px;
+  border: 0;
+  background: transparent;
+  font-weight: 500;
+}
+body.focus .fstoggles .btn:hover {
+  background: var(--surface2);
+}
+body.focus .fstoggles .btn::before {
+  content: '';
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--muted);
+  border-radius: 5px;
+  background: transparent center / 12px no-repeat;
+}
+body.focus .fstoggles .btn[aria-pressed='true']::before,
+body.focus .fstoggles .btn[aria-checked='true']::before {
+  border-color: var(--accent);
+  background-color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.2 6.3l2.5 2.5 5-5.4' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+body.focus .fstoggles .btn .track {
+  display: none;
+}
+
+/* hàng phía trên khung vẽ: tên phòng và công cụ của kiểu xem (chọn tường, chỉnh bố cục) */
+body.focus .fscanvasbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: absolute;
+  z-index: 4;
+  top: calc(-1 * var(--fs-head));
+  left: 0;
+  right: 0;
+  height: calc(var(--fs-head) - 6px);
+  pointer-events: none;
+}
+body.focus .fscanvasbar > * {
+  pointer-events: auto;
+}
+body.focus .stagehead,
+body.focus .fscanvasbar .wallsrow,
+body.focus .fscanvasbar .aptacts {
+  padding: 4px 10px;
+  min-height: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+body.focus .stagehead {
+  flex: 0 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+}
+body.focus .stagehead strong,
+body.focus .stagehead .mono {
+  white-space: nowrap;
+}
+body.focus .stagehead strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.focus .fscanvasbar .wallsrow {
+  flex: none;
+  padding: 2px 8px;
+}
+body.focus .fscanvasbar .aptacts {
+  flex: none;
+}
+body.focus .fscanvasbar .aptacts:not(:has(> :not([hidden]))) {
+  display: none;
+}
+/* gợi ý nhanh: nổi ở góc trái dưới của khung vẽ, tự ẩn sau ít giây */
+body.focus .fstipbox {
+  display: block;
+  position: absolute;
+  z-index: 5;
+  left: 12px;
+  bottom: 12px;
+  max-width: min(420px, calc(100% - 24px));
+  pointer-events: none;
+}
+body.focus .fstipbox .tip {
+  position: static;
+  transform: none;
+  max-width: none;
+  padding: 10px 8px 10px 12px;
+  align-items: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+}
+/* hàng phía dưới khung vẽ: dòng trạng thái (dài ngắn tùy câu, chừa sẵn hai dòng) và nút phóng to */
+body.focus .fsfoot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+  height: calc(var(--fs-foot) - 8px);
+}
+body.focus .fsfoot .status {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  padding: 5px 12px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+body.focus .zoombar {
+  flex: none;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+/* nút xoay, phóng to khung 3D ở góc phải dưới, nhường chỗ trên cùng cho tên phòng; gợi ý thao tác đã có ở gợi ý nhanh */
+body.focus .v3bar {
+  top: auto;
+  left: auto;
+  right: 12px;
+  bottom: 12px;
+  flex-wrap: nowrap;
+}
+body.focus .v3hint {
+  display: none;
+}
